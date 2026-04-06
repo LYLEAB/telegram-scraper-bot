@@ -34,63 +34,69 @@ def handle_webhook():
 
     kobo_id = str(data.get('_id'))
 
-    # Format the Scheme & Data
+    # 1. Format the Scheme & Basic Data
     scheme_raw = data.get('scheme', '')
     scheme_parts = scheme_raw.split('+')
-    promotion = scheme_raw
-    scheme_value = scheme_parts[0] if len(scheme_parts) > 0 else ""
-    free_product = scheme_parts[1] if len(scheme_parts) > 1 else ""
+    scheme_value = scheme_parts[0] if len(scheme_parts) > 0 else "0"
+    free_product = scheme_parts[1] if len(scheme_parts) > 1 else "0"
     posm = scheme_parts[2] if len(scheme_parts) > 2 else ""
 
-    brand_name = data.get('brand', '')
-    packaging_match = re.search(r'(Can|PET|Bottle|Draft|Glass)\s*\d+[a-zA-Z]+', brand_name, re.IGNORECASE)
-    packaging = packaging_match.group(0) if packaging_match else ""
+    brand_name = data.get('brand', 'Unknown Brand')
+    price_base = float(data.get('price_base', 0) or 0)
+    sell_out = data.get('price_net', '0') # Assuming this is your 'Sell Out Price' field
 
-# This matches: Promotion, Scheme, Free Product, POSM, Price before, Others, Channel, Function, Date, Region, Brand, Category, Packaging, Week, Type, Picture, Price Net, Kobo ID
+    # 2. PAP CALCULATION (Net Price)
+    try:
+        s_val = float(scheme_value if scheme_value.isdigit() else 0)
+        f_prod = float(free_product if free_product.isdigit() else 0)
+        if (s_val + f_prod) > 0:
+            net_price = round((price_base * s_val) / (s_val + f_prod), 2)
+        else:
+            net_price = price_base
+    except:
+        net_price = price_base
+
+    # 3. Create Google Maps Link
+    gps = data.get('_geolocation', [0, 0])
+    location_link = f"https://www.google.com/maps?q={gps[0]},{gps[1]}"
+
+    # 4. Organize Row Data for Google Sheets (A to R)
     row_data = [
-        promotion,                       # Col A
-        scheme_value,                    # Col B
-        free_product,                    # Col C
-        posm,                            # Col D
-        data.get('price_base', ''),      # Col E
-        data.get('note', ''),            # Col F (Mapped to 'Others')
-        data.get('channel', ''),         # Col G
-        "",                              # Col H (Function - Blank)
-        data.get('start', '')[:10],      # Col I (Date)
-        data.get('region', ''),          # Col J
-        brand_name,                      # Col K
-        data.get('category', ''),        # Col L
-        packaging,                       # Col M
-        "",                              # Col N (Week - Blank)
-        data.get('type', ''),            # Col O
-        data.get('picture', ''),         # Col P
-        data.get('price_net', ''),       # Col Q
-        kobo_id                          # Col R (The one you just added!)
+        scheme_raw, scheme_value, free_product, posm, price_base, 
+        data.get('note', ''), data.get('channel', ''), "", data.get('start', '')[:10], 
+        data.get('region', ''), brand_name, data.get('category', ''), "", 
+        "", data.get('type', ''), data.get('picture', ''), net_price, kobo_id
     ]
 
-    # Google Sheets Update Logic
-    existing_ids = sheet.col_values(18) # Looks at Column R (Kobo ID)
-    
+    # 5. Google Sheets Update Logic
+    existing_ids = sheet.col_values(18) 
     if kobo_id in existing_ids:
         row_index = existing_ids.index(kobo_id) + 1
         sheet.update(f'A{row_index}:R{row_index}', [row_data])
-        action = "🔄 UPDATED"
+        status_label = "🔄 UPDATED"
     else:
         sheet.append_row(row_data)
-        action = "✅ NEW"
+        status_label = "✅ NEW"
 
-    # Send Telegram Alert
+    # 6. Formatting the Telegram Message
     telegram_msg = f"""
-    {action} **Promotion Report**
-    👤 Dealer: {data.get('dealer_select', 'Unknown')}
-    📍 Region: {data.get('region_select', 'Unknown')}
-    🍺 Brand: {brand_name}
-    🎁 Scheme: {promotion}
-    💵 Price: ${data.get('price_base', '0')}
+{status_label} **Promotion of {brand_name}:**
+**Region:** {data.get('region', 'N/A')}
+**Dealer:** {data.get('dealer_select', 'N/A')}
+**Scheme:** {scheme_raw}
+**Basic Price:** {price_base}$
+**Net Price:** {net_price}$
+**Sell Out Price:** {sell_out}$
+**Channel:** {data.get('channel', 'N/A')}
+**Others:** {posm}
+**Type:** {data.get('type', 'N/A')}
+**Date:** {data.get('start', '')[:10]}
+**Note/Remark:** {data.get('note', 'None')}
+**Location:** [View on Map]({location_link})
     """
     send_telegram(telegram_msg)
 
-    return jsonify({"status": "success", "kobo_id": kobo_id}), 200
+    return jsonify({"status": "success"}), 200
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 8080))
