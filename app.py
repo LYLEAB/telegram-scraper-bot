@@ -46,11 +46,26 @@ def handle_webhook():
     packaging_match = re.search(r'(Can|PET|Bottle|Draft|Glass)\s*\d+[a-zA-Z]+', brand_name, re.IGNORECASE)
     packaging = packaging_match.group(0) if packaging_match else ""
 
+# This matches: Promotion, Scheme, Free Product, POSM, Price before, Others, Channel, Function, Date, Region, Brand, Category, Packaging, Week, Type, Picture, Price Net, Kobo ID
     row_data = [
-        promotion, scheme_value, free_product, posm, data.get('price_base', ''), 
-        data.get('note', ''), data.get('channel', ''), "", data.get('start', '')[:10], 
-        data.get('region', ''), brand_name, data.get('category', ''), packaging, 
-        "", data.get('type', ''), data.get('picture', ''), data.get('price_net', ''), kobo_id
+        promotion,                       # Col A
+        scheme_value,                    # Col B
+        free_product,                    # Col C
+        posm,                            # Col D
+        data.get('price_base', ''),      # Col E
+        data.get('note', ''),            # Col F (Mapped to 'Others')
+        data.get('channel', ''),         # Col G
+        "",                              # Col H (Function - Blank)
+        data.get('start', '')[:10],      # Col I (Date)
+        data.get('region', ''),          # Col J
+        brand_name,                      # Col K
+        data.get('category', ''),        # Col L
+        packaging,                       # Col M
+        "",                              # Col N (Week - Blank)
+        data.get('type', ''),            # Col O
+        data.get('picture', ''),         # Col P
+        data.get('price_net', ''),       # Col Q
+        kobo_id                          # Col R (The one you just added!)
     ]
 
     # Google Sheets Update Logic
