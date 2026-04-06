@@ -78,4 +78,6 @@ def handle_webhook():
     return jsonify({"status": "success", "kobo_id": kobo_id}), 200
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+    # Railway provides the PORT variable, we must use it
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port)
