@@ -12,7 +12,7 @@ app = Flask(__name__)
 # --- CONFIGURATION (Pulled from Railway Variables) ---
 TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_TOKEN')
 TELEGRAM_CHAT_ID = os.environ.get('TELEGRAM_CHAT_ID')
-SHEET_NAME = "Promotion Program vai Form" # Make sure this matches your Excel file name exactly!
+SHEET_NAME = "Promotion Program via Form" # Make sure this matches your Excel file name exactly!
 
 # Setup Google Sheets authentication
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
