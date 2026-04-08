@@ -18,7 +18,11 @@ scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/au
 creds_dict = json.loads(os.environ.get('GOOGLE_CREDS_JSON'))
 creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
 client = gspread.authorize(creds)
-sheet = client.open(SHEET_NAME).sheet1
+
+# Connect to the main file, then connect to the two separate tabs
+doc = client.open(SHEET_NAME)
+clean_sheet = doc.worksheet("Report")
+raw_sheet = doc.worksheet("Raw Data")
 
 # --- HELPER: AUTO-CURRENCY MAGIC ---
 def format_price(amount):
@@ -112,13 +116,25 @@ def handle_webhook():
 📝 <b>Note:</b> {note}
     """
 
-    # 5. Google Sheets Update (Now mapped to A through X)
+# 5A. Update the Clean Report (Tab 1)
     row_data = [
         date_val, region, dealer, province, district, commune, village, map_link, 
         channel, sub_channel, category, brand, type_val, scheme_raw, currency_type, 
         price_source, data.get('price_base', ''), data.get('price_net', ''), 
         data.get('price_sellout', ''), note, photo1, photo2, photo3, kobo_id
     ]
+    
+    existing_ids = clean_sheet.col_values(24) 
+    if kobo_id in existing_ids:
+        row_index = existing_ids.index(kobo_id) + 1
+        clean_sheet.update(f'A{row_index}:X{row_index}', [row_data])
+    else:
+        clean_sheet.append_row(row_data)
+
+    # 5B. Update the Raw Database (Tab 2)
+    # We turn the entire Kobo data package into a string and save it as a backup
+    import json # Make sure 'import json' is at the top of your file
+    raw_sheet.append_row([date_val, kobo_id, json.dumps(data)])
     
     # Check Column 24 (Col X) for the Kobo ID
     existing_ids = sheet.col_values(24) 
