@@ -49,15 +49,28 @@ def clean_html(text):
 def send_telegram_with_photo(message, photo_url):
     try:
         if photo_url and photo_url.startswith('http'):
+            # Step 1: Try sending the image directly to Telegram
             url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendPhoto"
             payload = {"chat_id": TELEGRAM_CHAT_ID, "photo": photo_url, "caption": message, "parse_mode": "HTML"}
+            response = requests.post(url, json=payload)
+            
+            # Step 2: If Kobo blocks Telegram from downloading the photo, FALLBACK to text
+            if response.status_code != 200:
+                print(f"⚠️ Telegram couldn't download photo. Falling back to text-only.")
+                
+                # Add the photo link to the bottom of the message instead
+                fallback_msg = message + f"\n\n📷 <a href='{photo_url}'>Click here to view Photo in Kobo</a>"
+                fallback_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+                fallback_payload = {"chat_id": TELEGRAM_CHAT_ID, "text": fallback_msg, "parse_mode": "HTML", "disable_web_page_preview": False}
+                
+                requests.post(fallback_url, json=fallback_payload)
+                
         else:
+            # If there is no photo at all, just send text normally
             url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
             payload = {"chat_id": TELEGRAM_CHAT_ID, "text": message, "parse_mode": "HTML", "disable_web_page_preview": True}
-        
-        response = requests.post(url, json=payload)
-        if response.status_code != 200:
-            print(f"❌ TELEGRAM REJECTED IT: {response.text}")
+            requests.post(url, json=payload)
+            
     except Exception as e:
         print(f"❌ TELEGRAM SERVER CRASH: {e}")
 
