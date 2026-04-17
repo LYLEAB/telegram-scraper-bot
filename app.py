@@ -19,7 +19,7 @@ creds_dict = json.loads(os.environ.get('GOOGLE_CREDS_JSON'))
 creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
 client = gspread.authorize(creds)
 
-# Automatically connect to Sheet1 (Senior's Report) and Raw Data
+# Connect to Sheet1 (Senior's Report) and Raw Data
 doc = client.open(SHEET_NAME)
 clean_sheet = doc.sheet1
 try:
@@ -30,7 +30,7 @@ except gspread.exceptions.WorksheetNotFound:
 
 # --- HELPER: AUTO-CURRENCY MAGIC ---
 def format_price(amount):
-    if not amount or amount == 'N/A':
+    if amount is None or amount == '' or amount == 'N/A':
         return "N/A"
     try:
         val = float(amount)
@@ -59,50 +59,52 @@ def handle_webhook():
 
     kobo_id = str(data.get('_id'))
 
-    # 1. Capture Basic Data
-    date_val = data.get('start', '')[:10]
-    region = str(data.get('region', 'N/A')).upper()
-    dealer = str(data.get('dealer_select', 'N/A')).upper()
-    channel = data.get('channel', 'N/A')
-    category = str(data.get('category', '')).upper()
-    type_val = str(data.get('type_select', 'N/A')).upper()
-    note = str(data.get('note_remark', '')).replace('<', '').replace('>', '').replace('&', 'and')
+    # 1. Capture Basic Data (Using 'or' to prevent null crashes)
+    date_val = (data.get('start') or '')[:10]
+    region = str(data.get('region') or 'N/A').upper()
+    dealer = str(data.get('dealer_select') or 'N/A').upper()
+    channel = data.get('channel') or 'N/A'
+    category = str(data.get('category') or '').upper()
+    type_val = str(data.get('type_select') or 'N/A').upper()
+    note = str(data.get('note_remark') or '').replace('<', '').replace('>', '').replace('&', 'and')
+
+    # Location Data
+    village = data.get('village') or 'N/A'
+    commune = data.get('commune') or 'N/A'
+    district = data.get('district') or 'N/A'
+    province = data.get('province') or 'N/A'
 
     # Prices
-    price_base = data.get('price_base', '')
-    price_net = data.get('price_net', '')
+    price_base = data.get('price_base')
+    price_net = data.get('price_net')
 
     # --- ADVANCED FORMATTING FOR SENIOR REPORT ---
     
-    # SPLIT SCHEME (e.g., "200+72+1parasol+2helmet")
-    scheme_raw = str(data.get('scheme', '')).replace('&', 'and')
+    # SPLIT SCHEME
+    scheme_raw = str(data.get('scheme') or '').replace('&', 'and')
     scheme_parts = scheme_raw.split('+')
     s_val = scheme_parts[0] if len(scheme_parts) > 0 else ""
     f_prod = scheme_parts[1] if len(scheme_parts) > 1 else ""
     posm = "+".join(scheme_parts[2:]) if len(scheme_parts) > 2 else ""
 
     # CLEAN BRAND & EXTRACT PACKAGING
-    brand_raw = str(data.get('brand_select', 'Unknown Brand'))
+    brand_raw = str(data.get('brand_select') or 'Unknown Brand')
     if '_' in brand_raw:
-        brand_clean = brand_raw.replace('_', ' ').title() # Fixes 'beer_abc_can_330ml' to 'Beer Abc Can 330ml'
+        brand_clean = brand_raw.replace('_', ' ').title() 
     else:
         brand_clean = brand_raw
     
-    # Regex to find packaging (Looks for Can, Pint, PET, Bottle)
     pack_match = re.search(r'(Can|Pint|PET|Bottle)[\s_]*[\d\.]+[a-zA-Z]+', brand_clean, re.IGNORECASE)
     packaging = pack_match.group(0).title().replace('Ml', 'ml') if pack_match else ""
     
-    # Merge Brand and Type
     brand_final = f"{brand_clean}-{type_val}" if type_val and type_val != 'N/A' else brand_clean
-
-    # CLEAN WEEK (e.g., 'week1' becomes 'Week 1')
-    week_val = str(data.get('week_num', '')).replace('week', 'Week ')
+    week_val = str(data.get('week_num') or '').replace('week', 'Week ')
 
     # --- PHOTOS & MAPS ---
     attachments = data.get('_attachments', [])
     photo1 = attachments[0].get('download_url') if len(attachments) > 0 else ""
 
-    gps = data.get('gps_location', '')
+    gps = data.get('gps_location') or ''
     map_link = "No location provided"
     if gps:
         coords = gps.split(' ') 
@@ -149,6 +151,9 @@ Net Price: {format_price(price_net)}
         price_net,                  # Q: PAP
         kobo_id                     # R: Kobo ID
     ]
+    
+    # SECURITY FIX: Convert any 'None' values into empty strings so Google Sheets doesn't crash
+    row_data = ["" if v is None else v for v in row_data]
     
     existing_ids = clean_sheet.col_values(18) 
     if kobo_id in existing_ids:
