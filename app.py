@@ -11,7 +11,7 @@ app = Flask(__name__)
 # --- CONFIGURATION ---
 TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_TOKEN')
 TELEGRAM_CHAT_ID = os.environ.get('TELEGRAM_CHAT_ID')
-KOBO_TOKEN = os.environ.get('KOBO_TOKEN') # Optional: If photos are strictly locked
+KOBO_TOKEN = os.environ.get('KOBO_TOKEN') 
 SHEET_NAME = "Promotion Program via Form" 
 
 # Setup Google Sheets
@@ -149,10 +149,20 @@ def convert_to_usd(amount):
     try:
         val = float(amount)
         if val >= 1000:
-            return round(val / 4000.0, 3) # Converts Riel to Dollars securely
-        return val # If already under 1000, it's already a Dollar value
+            return round(val / 4000.0, 3) 
+        return val 
     except ValueError:
         return amount
+
+def to_number(val):
+    """Forces text like '1000' into pure math numbers so Google Sheets's SUM() formula works"""
+    if not val:
+        return ""
+    clean_val = str(val).replace(',', '').strip()
+    try:
+        return float(clean_val) if '.' in clean_val else int(clean_val)
+    except ValueError:
+        return clean_val
 
 def clean_html(text):
     if text is None:
@@ -251,29 +261,27 @@ def handle_webhook():
 
     scheme_raw = str(data.get('scheme') or '')
     scheme_parts = scheme_raw.split('+')
-    s_val = scheme_parts[0] if len(scheme_parts) > 0 else ""
-    f_prod = scheme_parts[1] if len(scheme_parts) > 1 else ""
+    
+    # We use the new to_number() function so Google Sheets receives pure math numbers
+    s_val = to_number(scheme_parts[0] if len(scheme_parts) > 0 else "")
+    f_prod = to_number(scheme_parts[1] if len(scheme_parts) > 1 else "")
     posm = "+".join(scheme_parts[2:]) if len(scheme_parts) > 2 else ""
 
     # --- BRAND FORMATTING (WITH PREFIX STRIPPER) ---
     brand_raw = str(data.get('brand_select') or 'Unknown Brand')
     
-    # 1. Chop off the Kobo Category Prefix before formatting
     prefixes_to_remove = ["beer_", "csd_", "ed_", "isotonic_", "med_", "rtd_tea_", "scsd_", "water_"]
     for p in prefixes_to_remove:
         if brand_raw.startswith(p):
             brand_raw = brand_raw[len(p):]
             break
 
-    # 2. Clean it up
     brand_clean = brand_raw.replace('_', ' ').title()
     
-    # 3. Force uppercase for acronyms if they appear in the middle of a name
     for prefix in ["Ed ", "Csd ", "Med ", "Rtd ", "Scsd ", "Abc "]:
         if prefix in brand_clean:
             brand_clean = brand_clean.replace(prefix, prefix.upper())
             
-    # 4. Fix Ml to ml
     brand_clean = brand_clean.replace('Ml', 'ml')
     
     pack_match = re.search(r'(Can|Pint|PET|Pet|Bottle)[\s_]*[\d\.]+[a-zA-Z]+', brand_clean, re.IGNORECASE)
@@ -308,21 +316,31 @@ def handle_webhook():
 <b>Date:</b> {clean_html(date_val)}
 <b>Note:</b> {clean_html(note)}"""
 
-    # --- 3. GOOGLE SHEETS (Using the new convert_to_usd function) ---
-    row_data = [
-        scheme_raw, s_val, f_prod, posm, convert_to_usd(price_base), note, channel_clean, "", 
-        date_val, region, brand_final, category, packaging, week_val, type_val, 
-        photo1, convert_to_usd(price_net), kobo_id
-    ]
-    row_data = ["" if v is None else v for v in row_data]
-    
+    # --- 3. GOOGLE SHEETS INJECTION ---
     try:
         existing_ids = clean_sheet.col_values(18) 
+        
+        # Calculate exactly what row we are working on so the formula perfectly aligns!
         if kobo_id in existing_ids:
             row_index = existing_ids.index(kobo_id) + 1
-            clean_sheet.update(f'A{row_index}:R{row_index}', [row_data])
         else:
-            clean_sheet.append_row(row_data)
+            row_index = len(existing_ids) + 1
+
+        # The Senior's exact formula! Wrapped in IFERROR to prevent ugly #DIV/0! errors if data is blank.
+        pap_formula = f"=IFERROR(($E{row_index}*$B{row_index})/SUM($B{row_index}:$C{row_index}), 0)"
+
+        row_data = [
+            scheme_raw, s_val, f_prod, posm, convert_to_usd(price_base), note, channel_clean, "", 
+            date_val, region, brand_final, category, packaging, week_val, type_val, 
+            photo1, pap_formula, kobo_id
+        ]
+        row_data = ["" if v is None else v for v in row_data]
+        
+        # Added value_input_option='USER_ENTERED' so Sheets recognizes the formula!
+        if kobo_id in existing_ids:
+            clean_sheet.update(f'A{row_index}:R{row_index}', [row_data], value_input_option='USER_ENTERED')
+        else:
+            clean_sheet.append_row(row_data, value_input_option='USER_ENTERED')
     except Exception as e:
         print(f"❌ REPORT SHEET ERROR: {e}")
 
