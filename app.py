@@ -30,7 +30,6 @@ except gspread.exceptions.WorksheetNotFound:
 
 # --- DICTIONARIES FOR KOBO DATA TRANSLATION ---
 PROVINCE_MAP = {
-    # From your CSV exact codes
     "bmc": "Banteay Meanchey", "btt": "Battambang", "kc": "Kampong Cham", 
     "kchh": "Kampong Chhnang", "kspe": "Kampong Speu", "ktho": "Kampong Thom", 
     "kka": "Kampot", "kd": "Kandal", "kep": "Kep", "kkg": "Koh Kong", 
@@ -39,7 +38,6 @@ PROVINCE_MAP = {
     "pvihea": "Preah Vihear", "pv": "Prey Veng", "ppu": "Pursat", 
     "rkir": "Ratanak Kiri", "sr": "Siem Reap", "streng": "Stung Treng", 
     "svr": "Svay Rieng", "tke": "Takeo", "tkhmu": "Tboung Khmum",
-    # Keeping old safety fallbacks just in case
     "bmean": "Banteay Meanchey", "btb": "Battambang", "kcham": "Kampong Cham",
     "kchhnang": "Kampong Chhnang", "kspeu": "Kampong Speu", "kthom": "Kampong Thom",
     "kpot": "Kampot", "kdal": "Kandal", "kkong": "Koh Kong", "mndkiri": "Mondulkiri",
@@ -158,7 +156,6 @@ def send_telegram_media_group(message, photo_urls):
         requests.post(url, json=payload, timeout=15)
         return
 
-    # 1. Download images to memory to bypass Telegram URL blocking
     downloaded_files = {}
     media = []
     headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
@@ -174,34 +171,27 @@ def send_telegram_media_group(message, photo_urls):
                 media.append({
                     "type": "photo",
                     "media": f"attach://{filename}",
-                    "caption": message if len(media) == 0 else "", # Caption only on the first actual downloaded image
+                    "caption": message if len(media) == 0 else "", 
                     "parse_mode": "HTML"
                 })
         except Exception as e:
             print(f"Error downloading {url}: {e}")
 
-    # 2. Upload directly to Telegram
     try:
         if len(media) == 0:
-            # Fallback if download totally failed
             fallback_msg = message + "\n\n📷 <b>Photo Links:</b>\n" + "\n".join(valid_urls)
             requests.post(f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage", json={"chat_id": TELEGRAM_CHAT_ID, "text": fallback_msg, "parse_mode": "HTML"}, timeout=15)
-        
         elif len(media) == 1:
-            # Safe Single Photo Upload
             url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendPhoto"
-            first_filename = list(downloaded_files.keys())[0] # Fixes the missing image bug!
+            first_filename = list(downloaded_files.keys())[0] 
             files = {'photo': downloaded_files[first_filename]}
             data = {"chat_id": TELEGRAM_CHAT_ID, "caption": message, "parse_mode": "HTML"}
             requests.post(url, data=data, files=files, timeout=15)
-            
         else:
-            # Album Upload
             url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMediaGroup"
             files = {name: content for name, content in downloaded_files.items()}
             data = {"chat_id": TELEGRAM_CHAT_ID, "media": json.dumps(media)}
             requests.post(url, data=data, files=files, timeout=20)
-            
     except Exception as e:
         print(f"❌ TELEGRAM UPLOAD FAILED: {e}")
 
@@ -224,7 +214,6 @@ def handle_webhook():
     village = str(data.get('village') or 'N/A').title()
     commune = str(data.get('commune') or 'N/A').title()
     
-    # NEW: Translate the District using our new map
     dist_raw = str(data.get('district') or 'N/A').lower().strip()
     district = DISTRICT_MAP.get(dist_raw, dist_raw.title())
     
@@ -253,17 +242,28 @@ def handle_webhook():
     f_prod = scheme_parts[1] if len(scheme_parts) > 1 else ""
     posm = "+".join(scheme_parts[2:]) if len(scheme_parts) > 2 else ""
 
-    # --- BRAND FORMATTING ---
+    # --- BRAND FORMATTING (WITH PREFIX STRIPPER) ---
     brand_raw = str(data.get('brand_select') or 'Unknown Brand')
+    
+    # 1. Chop off the Kobo Category Prefix before formatting
+    prefixes_to_remove = ["beer_", "csd_", "ed_", "isotonic_", "med_", "rtd_tea_", "scsd_", "water_"]
+    for p in prefixes_to_remove:
+        if brand_raw.startswith(p):
+            brand_raw = brand_raw[len(p):]
+            break
+
+    # 2. Clean it up
     brand_clean = brand_raw.replace('_', ' ').title()
     
-    for prefix in ["Ed ", "Csd ", "Med ", "Rtd ", "Scsd "]:
+    # 3. Force uppercase for acronyms if they appear in the middle of a name
+    for prefix in ["Ed ", "Csd ", "Med ", "Rtd ", "Scsd ", "Abc "]:
         if prefix in brand_clean:
             brand_clean = brand_clean.replace(prefix, prefix.upper())
             
+    # 4. Fix Ml to ml
     brand_clean = brand_clean.replace('Ml', 'ml')
     
-    pack_match = re.search(r'(Can|Pint|PET|Bottle)[\s_]*[\d\.]+[a-zA-Z]+', brand_clean, re.IGNORECASE)
+    pack_match = re.search(r'(Can|Pint|PET|Pet|Bottle)[\s_]*[\d\.]+[a-zA-Z]+', brand_clean, re.IGNORECASE)
     packaging = pack_match.group(0).replace('Ml', 'ml') if pack_match else ""
     
     brand_final = f"{brand_clean}-{type_val}" if type_val and type_val != 'N/A' else brand_clean
