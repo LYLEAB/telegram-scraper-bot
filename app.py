@@ -130,6 +130,7 @@ CHANNEL_MAP = {
 
 # --- HELPERS ---
 def format_price(amount):
+    """Formats prices for TELEGRAM display (Keeps original Riel or USD)"""
     if amount is None or amount == '' or amount == 'N/A':
         return "N/A"
     try:
@@ -140,6 +141,18 @@ def format_price(amount):
             return f"{val:,.0f} ៛"
     except ValueError:
         return str(amount)
+
+def convert_to_usd(amount):
+    """Converts KHR to pure USD numbers for GOOGLE SHEETS calculation"""
+    if amount is None or amount == '' or amount == 'N/A':
+        return ""
+    try:
+        val = float(amount)
+        if val >= 1000:
+            return round(val / 4000.0, 3) # Converts Riel to Dollars securely
+        return val # If already under 1000, it's already a Dollar value
+    except ValueError:
+        return amount
 
 def clean_html(text):
     if text is None:
@@ -295,11 +308,11 @@ def handle_webhook():
 <b>Date:</b> {clean_html(date_val)}
 <b>Note:</b> {clean_html(note)}"""
 
-    # --- 3. GOOGLE SHEETS ---
+    # --- 3. GOOGLE SHEETS (Using the new convert_to_usd function) ---
     row_data = [
-        scheme_raw, s_val, f_prod, posm, price_base, note, channel_clean, "", 
+        scheme_raw, s_val, f_prod, posm, convert_to_usd(price_base), note, channel_clean, "", 
         date_val, region, brand_final, category, packaging, week_val, type_val, 
-        photo1, price_net, kobo_id
+        photo1, convert_to_usd(price_net), kobo_id
     ]
     row_data = ["" if v is None else v for v in row_data]
     
