@@ -34,8 +34,8 @@ PROVINCE_MAP = {
     "btt": "Battambang", "kcham": "Kampong Cham", "kchhnang": "Kampong Chhnang", 
     "kspeu": "Kampong Speu", "kthom": "Kampong Thom", "kpot": "Kampot", 
     "kdal": "Kandal", "kkong": "Koh Kong", "mndkiri": "Mondulkiri", 
-    "pvihear": "Preah Vihear", "pveng": "Prey Veng", "psat": "Pursat", 
-    "rkiri": "Ratanakiri", "sreap": "Siem Reap", "snouk": "Preah Sihanouk", 
+    "pvihear": "Preah Vihear", "pvihea": "Preah Vihear", "pveng": "Prey Veng", 
+    "psat": "Pursat", "rkiri": "Ratanakiri", "sreap": "Siem Reap", "snouk": "Preah Sihanouk", 
     "streng": "Stung Treng", "srieng": "Svay Rieng", "tbkhmum": "Tboung Khmum", 
     "tkhmu": "Tboung Khmum", "pp": "Phnom Penh", "tke": "Takeo", "kep": "Kep", 
     "pailin": "Pailin"
