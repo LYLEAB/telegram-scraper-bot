@@ -129,21 +129,18 @@ def handle_webhook():
 
     # --- 2. TELEGRAM MESSAGE (Wrapped in clean_html) ---
     telegram_msg = f"""
-<b>Promotion of: {clean_html(brand_clean)}</b>
-<b>Dealer:</b> {clean_html(dealer)} (Region: {clean_html(region)})
-<b>Date:</b> {clean_html(date_val)}
-
-<b>Channel:</b> {clean_html(channel)}
-<b>Type:</b> {clean_html(type_val)}
-<b>Scheme:</b> {clean_html(scheme_raw)}
-
-Original Price From: {clean_html(format_price(price_base))}
-Net Price: {clean_html(format_price(price_net))}
-
-<b>Area:</b> {clean_html(village)}, {clean_html(commune)}, {clean_html(district)}, {clean_html(province)}
-<b>GPS Map:</b> <a href='{map_link}'>Open Google Maps</a>
-
-<b>Note:</b> {clean_html(note)}
+<b>Promotion of: {brand}</b>
+<b>Region:</b> {region} (Dealer: {dealer}), 
+<b>Location:</b> {village}, {commune}, {district}, {province}
+<b>Location Map:</b> <a href='{map_link}'>Open Google Maps</a>
+<b>Channel:</b> {channel} (<i>{sub_channel}</i>)
+<b>Type:</b> {type_val}
+<b>Scheme:</b> {scheme_raw}
+• Basic Price: {base_price_str} (From {price_source})
+• Net Price: {net_price_str}
+• Sell Out Price: {sellout_price_str}
+<b>Date:</b> {date_val}
+<b>Note:</b> {note}
     """
 
     # --- 3A. EXACT SENIOR REPORT ---
