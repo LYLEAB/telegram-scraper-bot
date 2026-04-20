@@ -30,15 +30,98 @@ except gspread.exceptions.WorksheetNotFound:
 
 # --- DICTIONARIES FOR KOBO DATA TRANSLATION ---
 PROVINCE_MAP = {
-    "omeanc": "Oddar Meanchey", "bmean": "Banteay Meanchey", "btb": "Battambang",
-    "btt": "Battambang", "kcham": "Kampong Cham", "kchhnang": "Kampong Chhnang", 
-    "kspeu": "Kampong Speu", "kthom": "Kampong Thom", "kpot": "Kampot", 
-    "kdal": "Kandal", "kkong": "Koh Kong", "mndkiri": "Mondulkiri", 
-    "pvihear": "Preah Vihear", "pvihea": "Preah Vihear", "pveng": "Prey Veng", 
-    "psat": "Pursat", "rkiri": "Ratanakiri", "sreap": "Siem Reap", "snouk": "Preah Sihanouk", 
-    "streng": "Stung Treng", "srieng": "Svay Rieng", "tbkhmum": "Tboung Khmum", 
-    "tkhmu": "Tboung Khmum", "pp": "Phnom Penh", "tke": "Takeo", "kep": "Kep", 
-    "pailin": "Pailin"
+    # From your CSV exact codes
+    "bmc": "Banteay Meanchey", "btt": "Battambang", "kc": "Kampong Cham", 
+    "kchh": "Kampong Chhnang", "kspe": "Kampong Speu", "ktho": "Kampong Thom", 
+    "kka": "Kampot", "kd": "Kandal", "kep": "Kep", "kkg": "Koh Kong", 
+    "kkr": "Kratie", "mkiri": "Mondul Kiri", "omeanc": "Oddar Meanchey", 
+    "ppa": "Pailin", "pp": "Phnom Penh", "psihan": "Preah Sihanouk", 
+    "pvihea": "Preah Vihear", "pv": "Prey Veng", "ppu": "Pursat", 
+    "rkir": "Ratanak Kiri", "sr": "Siem Reap", "streng": "Stung Treng", 
+    "svr": "Svay Rieng", "tke": "Takeo", "tkhmu": "Tboung Khmum",
+    # Keeping old safety fallbacks just in case
+    "bmean": "Banteay Meanchey", "btb": "Battambang", "kcham": "Kampong Cham",
+    "kchhnang": "Kampong Chhnang", "kspeu": "Kampong Speu", "kthom": "Kampong Thom",
+    "kpot": "Kampot", "kdal": "Kandal", "kkong": "Koh Kong", "mndkiri": "Mondulkiri",
+    "pvihear": "Preah Vihear", "pveng": "Prey Veng", "psat": "Pursat",
+    "rkiri": "Ratanakiri", "sreap": "Siem Reap", "snouk": "Preah Sihanouk",
+    "srieng": "Svay Rieng", "tbkhmum": "Tboung Khmum"
+}
+
+DISTRICT_MAP = {
+    "omaec": "Odongk Maechay", "as": "Angk Snuol", "plueu": "Ponhea Lueu",
+    "praekpnov": "Praek Pnov", "russeykeo": "Russey Keo", "bkk": "Boeng Keng Kang",
+    "chamkarmon": "Chamkar Mon", "dounpenh": "Doun Penh", "pmea": "Prampir Meakkakra",
+    "dangkao": "Dangkao", "meanchey": "Mean Chey", "saensokh": "Saensokh",
+    "kamboul": "Kamboul", "pursenchey": "Pur SenChey", "tuolkouk": "Tuol Kouk",
+    "kiensvay": "Kien Svay", "chbarampov": "Chbar Ampov", "mukhkampul": "Mukh Kampul",
+    "chraoychongvar": "Chraoy Chongvar", "kaohsoutin": "Kaoh Soutin", 
+    "sreisanthor": "Srei Santhor", "khsachkandal": "Khsach Kandal", "lveaaem": "Lvea Aem",
+    "akreiyksatr": "Akreiy Ksatr", "peareang": "Pea Reang", "purrieng": "Pur Rieng",
+    "basedth": "Basedth", "kongpisei": "Kong Pisei", "bati": "Bati", "samraong": "Samraong",
+    "bavet": "Bavet", "chantrea": "Chantrea", "kampongrou": "Kampong Rou",
+    "svayteab": "Svay Teab", "srig": "Svay Rieng", "kandalstueng": "Kandal Stueng",
+    "sang": "S'ang", "takhmau": "Ta Khmau", "kaohthum": "Kaoh Thum", "leukdaek": "Leuk Daek",
+    "sampeoupoun": "Sampeou Poun", "boreicholsar": "Borei Cholsar", 
+    "kaohandaet": "Kaoh Andaet", "kirivong": "Kiri Vong", "treang": "Treang",
+    "kampongtrabaek": "Kampong Trabaek", "mesang": "Me Sang", "preahsdach": "Preah Sdach",
+    "angkorborei": "Angkor Borei", "preykabbas": "Prey Kabbas", "baphnum": "Ba Phnum",
+    "peamchor": "Peam Chor", "peamro": "Peam Ro", "kamchaymear": "Kamchay Mear",
+    "kanhchriech": "Kanhchriech", "sithorkandal": "Sithor Kandal", "pvg": "Prey Veng",
+    "svayantor": "Svay Antor", "romeashaek": "Romeas Haek", "rumduol": "Rumduol",
+    "svaychrum": "Svay Chrum", "dounkaev": "Doun Kaev", "tramkak": "Tram Kak",
+    "chhuk": "Chhuk", "chumkiri": "Chum Kiri", "dangtong": "Dang Tong", "kamt": "Kampot",
+    "baribour": "Baribour", "kampongleaeng": "Kampong Leaeng", "kampongchh": "Kampong Chhnang",
+    "roleabier": "Rolea B'ier", "tuekphos": "Tuek Phos", "botumsakor": "Botum Sakor",
+    "khemaraphoumin": "Khemara Phoumin", "kirisakor": "Kiri Sakor", 
+    "mondolseima": "Mondol Seima", "thmabang": "Thma Bang", "phnumsruoch": "Phnum Sruoch",
+    "samraongtong": "Samraong Tong", "bokor": "Bokor", "tuekchhou": "Tuek Chhou",
+    "kampongsoam": "Kampong Soam", "kaohrung": "Kaoh Rung", "preynob": "Prey Nob",
+    "preahsiha": "Preah Sihanouk", "aoral": "Aoral", "chbarmon": "Chbar Mon",
+    "samkkeimunichay": "Samkkei Munichay", "thpong": "Thpong", "cholkiri": "Chol Kiri",
+    "kampongtralach": "Kampong Tralach", "sameakkimeanchey": "Sameakki Mean Chey",
+    "angkorchey": "Angkor Chey", "banteaymeas": "Banteay Meas", 
+    "damnakchangaeur": "Damnak Chang'aeur", "kaeb": "Kaeb", "kagtrach": "Kampong Trach",
+    "kampongseila": "Kampong Seila", "stuenghav": "Stueng Hav", "sraeambel": "Srae Ambel",
+    "aekphnum": "Aek Phnum", "banan": "Banan", "battambangd": "Battambang",
+    "koaskrala": "Koas Krala", "sangkae": "Sangkae", "thmakoul": "Thma Koul",
+    "bavel": "Bavel", "rotonakmondol": "Rotonak Mondol", "kamrieng": "Kamrieng",
+    "phnumproek": "Phnum Proek", "sampovlun": "Sampov Lun", "moungruessei": "Moung Ruessei",
+    "rukhkiri": "Rukh Kiri", "bakan": "Bakan", "samlout": "Samlout", "salakrau": "Sala Krau",
+    "pail": "Pailin", "malai": "Malai", "ouchrov": "Ou Chrov", "paoypaet": "Paoy Paet",
+    "kandieng": "Kandieng", "krakor": "Krakor", "purs": "Pursat", 
+    "phnumkravanh": "Phnum Kravanh", "talousenchey": "Ta Lou Senchey", 
+    "vealveaeng": "Veal Veaeng", "mongkolborei": "Mongkol Borei", 
+    "sereisaophoan": "Serei Saophoan", "svaychek": "Svay Chek", "thmapuok": "Thma Puok",
+    "chikraeng": "Chi Kraeng", "soutrnikom": "Soutr Nikom", "svayleu": "Svay Leu",
+    "kampongsvay": "Kampong Svay", "prasatballangk": "Prasat Ballangk",
+    "prasatsambour": "Prasat Sambour", "sandan": "Sandan", "santuk": "Santuk",
+    "stoung": "Stoung", "stuengsaen": "Stueng Saen", "baray": "Baray", 
+    "taingkouk": "Taing Kouk", "phnumsrok": "Phnum Srok", "preahnetrpreah": "Preah Netr Preah",
+    "angkorchum": "Angkor Chum", "kralanh": "Kralanh", "puok": "Puok",
+    "siemreapd": "Siem Reap", "sreisnam": "Srei Snam", "angkorthum": "Angkor Thum",
+    "banteaysrei": "Banteay Srei", "prasatbakong": "Prasat Bakong",
+    "runtaaektechosen": "Run Ta Aek Techo Sen", "varin": "Varin", "batheay": "Batheay",
+    "cheungprey": "Cheung Prey", "kangmeas": "Kang Meas", "preychhor": "Prey Chhor",
+    "kampongsiem": "Kampong Siem", "kamgcham": "Kampong Cham", "dambae": "Dambae",
+    "memot": "Memot", "ponheakraek": "Ponhea Kraek", "chamkarleu": "Chamkar Leu",
+    "stuengtrang": "Stueng Trang", "krouchchhmar": "Krouch Chhmar", 
+    "oureangov": "Ou Reang Ov", "suong": "Suong", "tbogkhm": "Tboung Khmum",
+    "andoungmeas": "Andoung Meas", "barkaev": "Bar Kaev", "lumphat": "Lumphat",
+    "ouyadav": "Ou Ya Dav", "chetrborei": "Chetr Borei", "chhloung": "Chhloung",
+    "kracheh": "Kracheh", "oukriengsaenchey": "Ou Krieng Saenchey", 
+    "prekprasab": "Prek Prasab", "sambour": "Sambour", "snuol": "Snuol",
+    "kaevseima": "Kaev Seima", "kaohnheaek": "Kaoh Nheaek", "oureang": "Ou Reang",
+    "pechchreada": "Pech Chreada", "saenmonourom": "Saen Monourom", "banlung": "Ban Lung",
+    "kounmom": "Koun Mom", "ouchum": "Ou Chum", "taveaeng": "Ta Veaeng",
+    "veunsai": "Veun Sai", "boreiousvaysenchey": "Borei Ou Svay Senchey", "sesan": "Sesan",
+    "siembouk": "Siem Bouk", "siempang": "Siem Pang", "stuengtraeng": "Stueng Traeng",
+    "thalabarivat": "Thala Barivat", "anlongveaeng": "Anlong Veaeng",
+    "trapeangprasat": "Trapeang Prasat", "choamksant": "Choam Ksant", 
+    "cheysaen": "Chey Saen", "chhaeb": "Chhaeb", "kuleaen": "Kuleaen", 
+    "rovieng": "Rovieng", "sangkumthmei": "Sangkum Thmei", 
+    "tbaengmeanchey": "Tbaeng Mean Chey", "prvih": "Preah Vihear", 
+    "banteayampil": "Banteay Ampil", "chongkal": "Chong Kal", "kgsr": "Krong Samraong"
 }
 
 CHANNEL_MAP = {
@@ -140,7 +223,10 @@ def handle_webhook():
     # --- LOCATION FORMATTING ---
     village = str(data.get('village') or 'N/A').title()
     commune = str(data.get('commune') or 'N/A').title()
-    district = str(data.get('district') or 'N/A').title()
+    
+    # NEW: Translate the District using our new map
+    dist_raw = str(data.get('district') or 'N/A').lower().strip()
+    district = DISTRICT_MAP.get(dist_raw, dist_raw.title())
     
     prov_raw = str(data.get('province') or 'N/A').lower().strip()
     province = PROVINCE_MAP.get(prov_raw, prov_raw.title())
