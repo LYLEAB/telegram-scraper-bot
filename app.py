@@ -128,9 +128,19 @@ CHANNEL_MAP = {
     "wedding": "Wedding"
 }
 
+CATEGORY_MAP = {
+    "beer": "Beer",
+    "ed": "ED",
+    "med": "MED",
+    "csd": "CSD",
+    "scsd": "SCSD",
+    "isotonic": "Isotonic",
+    "rtd_tea": "RTD Tea",
+    "water": "Water"
+}
+
 # --- HELPERS ---
 def format_price(amount):
-    """Formats prices for TELEGRAM display (Keeps original Riel or USD)"""
     if amount is None or amount == '' or amount == 'N/A':
         return "N/A"
     try:
@@ -143,7 +153,6 @@ def format_price(amount):
         return str(amount)
 
 def convert_to_usd(amount):
-    """Converts KHR to pure USD numbers for GOOGLE SHEETS calculation"""
     if amount is None or amount == '' or amount == 'N/A':
         return ""
     try:
@@ -155,7 +164,6 @@ def convert_to_usd(amount):
         return amount
 
 def to_number(val):
-    """Forces text like '1000' into pure math numbers so Google Sheets's SUM() formula works"""
     if not val:
         return ""
     clean_val = str(val).replace(',', '').strip()
@@ -164,13 +172,32 @@ def to_number(val):
     except ValueError:
         return clean_val
 
+def format_packaging(pack_str):
+    """Formats packaging case correctly and converts ml >= 1000 to Liters."""
+    if not pack_str:
+        return ""
+    
+    # Standardize spelling/casing of container types
+    pack_str = pack_str.title().replace('Pet', 'PET').replace('Ml', 'ml')
+    
+    # Find numbers followed by 'ml' to convert Liters
+    match = re.search(r'([\d\.]+)\s*ml', pack_str, re.IGNORECASE)
+    if match:
+        ml_val = float(match.group(1))
+        if ml_val >= 1000:
+            l_val = ml_val / 1000
+            # format as :g to smartly drop zeros (e.g., 1.500 -> 1.5)
+            l_str = f"{l_val:g}L"
+            pack_str = re.sub(r'[\d\.]+\s*ml', l_str, pack_str, flags=re.IGNORECASE)
+            
+    return pack_str
+
 def clean_html(text):
     if text is None:
         return ""
     return str(text).replace('&', 'and').replace('<', '').replace('>', '')
 
 def send_telegram_media_group(message, photo_urls):
-    """Downloads photos directly via Python and uploads them natively to Telegram"""
     valid_urls = [url for url in photo_urls if url and url.startswith('http')]
     
     if len(valid_urls) == 0:
@@ -229,7 +256,11 @@ def handle_webhook():
     date_val = (data.get('start') or '')[:10]
     region = str(data.get('region_select') or data.get('region') or 'N/A').upper()
     dealer = str(data.get('dealer_select') or 'N/A').upper()
-    category = str(data.get('category') or '').upper().replace('_', ' ')
+    
+    # --- Exact Category Match ---
+    cat_raw = str(data.get('category') or '').lower().strip()
+    category = CATEGORY_MAP.get(cat_raw, cat_raw.title())
+    
     type_val = str(data.get('type_select') or 'N/A').upper()
     note = str(data.get('note_remark') or '')
 
@@ -262,7 +293,6 @@ def handle_webhook():
     scheme_raw = str(data.get('scheme') or '')
     scheme_parts = scheme_raw.split('+')
     
-    # We use the new to_number() function so Google Sheets receives pure math numbers
     s_val = to_number(scheme_parts[0] if len(scheme_parts) > 0 else "")
     f_prod = to_number(scheme_parts[1] if len(scheme_parts) > 1 else "")
     posm = "+".join(scheme_parts[2:]) if len(scheme_parts) > 2 else ""
@@ -284,8 +314,9 @@ def handle_webhook():
             
     brand_clean = brand_clean.replace('Ml', 'ml')
     
+    # --- Intelligent Packaging Extraction ---
     pack_match = re.search(r'(Can|Pint|PET|Pet|Bottle)[\s_]*[\d\.]+[a-zA-Z]+', brand_clean, re.IGNORECASE)
-    packaging = pack_match.group(0).replace('Ml', 'ml') if pack_match else ""
+    packaging = format_packaging(pack_match.group(0)) if pack_match else ""
     
     brand_final = f"{brand_clean}-{type_val}" if type_val and type_val != 'N/A' else brand_clean
     week_val = str(data.get('week_num') or '').replace('week', 'Week ')
@@ -316,19 +347,15 @@ def handle_webhook():
 <b>Date:</b> {clean_html(date_val)}
 <b>Note:</b> {clean_html(note)}"""
 
-# --- 3. GOOGLE SHEETS INJECTION ---
+    # --- 3. GOOGLE SHEETS INJECTION ---
     try:
-        existing_ids = clean_sheet.col_values(18) # Looks ONLY at Column R (Kobo ID)
+        existing_ids = clean_sheet.col_values(18) 
         
-        # Calculate exactly what row we are working on
         if kobo_id in existing_ids:
-            # If ID exists, update that specific row (Duplicate Protection)
             row_index = existing_ids.index(kobo_id) + 1
         else:
-            # If it's a new ID, find the true bottom of Column R
             row_index = len(existing_ids) + 1 
 
-        # The Senior's exact formula perfectly synced!
         pap_formula = f"=IFERROR(($E{row_index}*$B{row_index})/SUM($B{row_index}:$C{row_index}), 0)"
 
         row_data = [
@@ -338,7 +365,6 @@ def handle_webhook():
         ]
         row_data = ["" if v is None else v for v in row_data]
         
-        # We use strict "update" instead of "append_row"
         clean_sheet.update(f'A{row_index}:R{row_index}', [row_data], value_input_option='USER_ENTERED')
         
     except Exception as e:
