@@ -192,7 +192,8 @@ def handle_webhook():
 
     # --- 2. EXACT TELEGRAM MESSAGE FORMAT ---
     telegram_msg = f"""<b>Promotion of:</b> {clean_html(brand_final)}
-<b>Region:</b> {clean_html(region)} (Dealer: {clean_html(dealer)})
+<b>Region:</b> {clean_html(region)}
+<b>Dealer:</b> {clean_html(dealer)}
 <b>Location:</b> {clean_html(village)}, {clean_html(commune)}, {clean_html(district)}, {clean_html(province)}
 <b>Location Map:</b> <a href='{map_link}'>Open Google Maps</a>
 <b>Channel:</b> {clean_html(channel_display)}
