@@ -37,7 +37,8 @@ PROVINCE_MAP = {
     "pvihear": "Preah Vihear", "pveng": "Prey Veng", "psat": "Pursat", 
     "rkiri": "Ratanakiri", "sreap": "Siem Reap", "snouk": "Preah Sihanouk", 
     "streng": "Stung Treng", "srieng": "Svay Rieng", "tbkhmum": "Tboung Khmum", 
-    "pp": "Phnom Penh", "tke": "Takeo", "kep": "Kep", "pailin": "Pailin"
+    "tkhmu": "Tboung Khmum", "pp": "Phnom Penh", "tke": "Takeo", "kep": "Kep", 
+    "pailin": "Pailin"
 }
 
 CHANNEL_MAP = {
