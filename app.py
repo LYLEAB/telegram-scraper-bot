@@ -27,6 +27,24 @@ except gspread.exceptions.WorksheetNotFound:
     raw_sheet = doc.add_worksheet(title="Raw Data", rows="1000", cols="3")
     raw_sheet.append_row(["Date", "Kobo ID", "Full Raw Code"])
 
+# --- DICTIONARIES FOR KOBO DATA TRANSLATION ---
+# Kobo sends hidden XML values. We translate them back to beautiful labels here.
+PROVINCE_MAP = {
+    "omeanc": "Oddar Meanchey", "bmean": "Banteay Meanchey", "btb": "Battambang",
+    "kcham": "Kampong Cham", "kchhnang": "Kampong Chhnang", "kspeu": "Kampong Speu",
+    "kthom": "Kampong Thom", "kpot": "Kampot", "kdal": "Kandal", "kkong": "Koh Kong",
+    "mndkiri": "Mondulkiri", "pvihear": "Preah Vihear", "pveng": "Prey Veng",
+    "psat": "Pursat", "rkiri": "Ratanakiri", "sreap": "Siem Reap", 
+    "snouk": "Preah Sihanouk", "streng": "Stung Treng", "srieng": "Svay Rieng",
+    "tbkhmum": "Tboung Khmum", "pp": "Phnom Penh"
+}
+
+CHANNEL_MAP = {
+    "off_trade": "Off-Trade", 
+    "horeca": "HORECA", 
+    "wedding": "Wedding"
+}
+
 # --- HELPERS ---
 def format_price(amount):
     if amount is None or amount == '' or amount == 'N/A':
@@ -41,36 +59,46 @@ def format_price(amount):
         return str(amount)
 
 def clean_html(text):
-    """Washes text of symbols that cause Telegram to crash"""
     if text is None:
         return ""
     return str(text).replace('&', 'and').replace('<', '').replace('>', '')
 
-def send_telegram_with_photo(message, photo_url):
+def send_telegram_media_group(message, photo_urls):
+    """Sends up to 3 photos directly as a Telegram Album"""
+    valid_urls = [url for url in photo_urls if url and url.startswith('http')]
+    
     try:
-        if photo_url and photo_url.startswith('http'):
-            # Step 1: Try sending the image directly to Telegram
-            url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendPhoto"
-            payload = {"chat_id": TELEGRAM_CHAT_ID, "photo": photo_url, "caption": message, "parse_mode": "HTML"}
-            response = requests.post(url, json=payload)
-            
-            # Step 2: If Kobo blocks Telegram from downloading the photo, FALLBACK to text
-            if response.status_code != 200:
-                print(f"⚠️ Telegram couldn't download photo. Falling back to text-only.")
-                
-                # Add the photo link to the bottom of the message instead
-                fallback_msg = message + f"\n\n📷 <a href='{photo_url}'>Click here to view Photo in Kobo</a>"
-                fallback_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-                fallback_payload = {"chat_id": TELEGRAM_CHAT_ID, "text": fallback_msg, "parse_mode": "HTML", "disable_web_page_preview": False}
-                
-                requests.post(fallback_url, json=fallback_payload)
-                
-        else:
-            # If there is no photo at all, just send text normally
+        if len(valid_urls) == 0:
+            # No photos, send text only
             url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
             payload = {"chat_id": TELEGRAM_CHAT_ID, "text": message, "parse_mode": "HTML", "disable_web_page_preview": True}
             requests.post(url, json=payload)
-            
+        elif len(valid_urls) == 1:
+            # Single photo
+            url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendPhoto"
+            payload = {"chat_id": TELEGRAM_CHAT_ID, "photo": valid_urls[0], "caption": message, "parse_mode": "HTML"}
+            res = requests.post(url, json=payload)
+            if res.status_code != 200:
+                print(f"⚠️ Photo blocked by Kobo. Falling back to links.")
+                fallback_msg = message + f"\n\n📷 <b>Photo Link:</b>\n{valid_urls[0]}"
+                requests.post(f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage", json={"chat_id": TELEGRAM_CHAT_ID, "text": fallback_msg, "parse_mode": "HTML"})
+        else:
+            # Multiple photos (Media Group / Album)
+            url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMediaGroup"
+            media = []
+            for i, p_url in enumerate(valid_urls):
+                media.append({
+                    "type": "photo",
+                    "media": p_url,
+                    "caption": message if i == 0 else "", # Put caption only on the first photo
+                    "parse_mode": "HTML"
+                })
+            res = requests.post(url, json={"chat_id": TELEGRAM_CHAT_ID, "media": media})
+            if res.status_code != 200:
+                print(f"⚠️ Album blocked by Kobo. Falling back to links.")
+                fallback_msg = message + "\n\n📷 <b>Photo Links:</b>\n" + "\n".join(valid_urls)
+                requests.post(f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage", json={"chat_id": TELEGRAM_CHAT_ID, "text": fallback_msg, "parse_mode": "HTML"})
+                
     except Exception as e:
         print(f"❌ TELEGRAM SERVER CRASH: {e}")
 
@@ -82,41 +110,47 @@ def handle_webhook():
 
     kobo_id = str(data.get('_id'))
 
-    # 1. Capture Basic Data
+    # 1. Capture Basic Data (Fixing Region to look for region_select)
     date_val = (data.get('start') or '')[:10]
-    region = str(data.get('region') or 'N/A').upper()
+    region = str(data.get('region_select') or data.get('region') or 'N/A').upper()
     dealer = str(data.get('dealer_select') or 'N/A').upper()
     
-    # Capture Channel & Sub-channel
-    channel = data.get('channel') or 'N/A'
-    sub_channel = data.get('sub_channel') or 'N/A'
-    
-    category = str(data.get('category') or '').upper()
+    category = str(data.get('category') or '').upper().replace('_', ' ')
     type_val = str(data.get('type_select') or 'N/A').upper()
     note = str(data.get('note_remark') or '')
 
-    # Location
-    village = data.get('village') or 'N/A'
-    commune = data.get('commune') or 'N/A'
-    district = data.get('district') or 'N/A'
-    province = data.get('province') or 'N/A'
+    # --- LOCATION FORMATTING ---
+    village = str(data.get('village') or 'N/A').title()
+    commune = str(data.get('commune') or 'N/A').title()
+    district = str(data.get('district') or 'N/A').title()
+    
+    prov_raw = str(data.get('province') or 'N/A').lower()
+    province = PROVINCE_MAP.get(prov_raw, prov_raw.title())
 
-    # Capture all Prices & Sources for your custom Telegram message
+    # --- CHANNEL FORMATTING ---
+    c_raw = data.get('channel') or 'N/A'
+    channel_clean = CHANNEL_MAP.get(c_raw, c_raw.replace('_', ' ').title())
+    
+    sub_raw = data.get('sub_channel') or 'N/A'
+    if sub_raw != 'N/A' and sub_raw.strip() != '':
+        channel_display = f"{channel_clean} (<i>{sub_raw.replace('_', ' ').title()}</i>)"
+    else:
+        channel_display = f"{channel_clean}"
+
+    # --- PRICES ---
     price_base = data.get('price_base')
     price_net = data.get('price_net')
     price_sellout = data.get('price_sellout')
-    price_source = data.get('price_source') or 'N/A'
-    
-    base_price_str = format_price(price_base)
-    net_price_str = format_price(price_net)
-    sellout_price_str = format_price(price_sellout)
+    price_source = str(data.get('price_source') or 'N/A').title()
 
+    # --- SCHEME ---
     scheme_raw = str(data.get('scheme') or '')
     scheme_parts = scheme_raw.split('+')
     s_val = scheme_parts[0] if len(scheme_parts) > 0 else ""
     f_prod = scheme_parts[1] if len(scheme_parts) > 1 else ""
     posm = "+".join(scheme_parts[2:]) if len(scheme_parts) > 2 else ""
 
+    # --- BRAND FORMATTING ---
     brand_raw = str(data.get('brand_select') or 'Unknown Brand')
     if '_' in brand_raw:
         brand_clean = brand_raw.replace('_', ' ').title() 
@@ -126,12 +160,21 @@ def handle_webhook():
     pack_match = re.search(r'(Can|Pint|PET|Bottle)[\s_]*[\d\.]+[a-zA-Z]+', brand_clean, re.IGNORECASE)
     packaging = pack_match.group(0).title().replace('Ml', 'ml') if pack_match else ""
     
+    # This creates EXACTLY "Greet Energy Can 250ml-NCP"
     brand_final = f"{brand_clean}-{type_val}" if type_val and type_val != 'N/A' else brand_clean
     week_val = str(data.get('week_num') or '').replace('week', 'Week ')
 
+    # --- MULTIPLE PHOTOS ---
     attachments = data.get('_attachments', [])
-    photo1 = attachments[0].get('download_url') if len(attachments) > 0 else ""
+    photo_urls = []
+    for att in attachments[:3]: # Grab up to 3 photos
+        if att.get('download_url'):
+            photo_urls.append(att.get('download_url'))
+            
+    # Keep photo1 isolated for the Google Sheet column
+    photo1 = photo_urls[0] if len(photo_urls) > 0 else ""
 
+    # --- MAPS ---
     gps = data.get('gps_location') or ''
     map_link = "No location provided"
     if gps:
@@ -139,23 +182,22 @@ def handle_webhook():
         if len(coords) >= 2:
             map_link = f"http://maps.google.com/maps?q={coords[0]},{coords[1]}"
 
-    # --- 2. TELEGRAM MESSAGE (Wrapped in clean_html for safety) ---
+    # --- 2. TELEGRAM MESSAGE ---
     telegram_msg = f"""
-<b>Promotion of: {clean_html(brand_clean)}</b>
+<b>Promotion of: {clean_html(brand_final)}</b>
 <b>Region:</b> {clean_html(region)} (Dealer: {clean_html(dealer)}), 
 <b>Location:</b> {clean_html(village)}, {clean_html(commune)}, {clean_html(district)}, {clean_html(province)}
 <b>Location Map:</b> <a href='{map_link}'>Open Google Maps</a>
-<b>Channel:</b> {clean_html(channel)} (<i>{clean_html(sub_channel)}</i>)
-<b>Type:</b> {clean_html(type_val)}
+<b>Channel:</b> {channel_display}
 <b>Scheme:</b> {clean_html(scheme_raw)}
-• Basic Price: {clean_html(base_price_str)} (From {clean_html(price_source)})
-• Net Price: {clean_html(net_price_str)}
-• Sell Out Price: {clean_html(sellout_price_str)}
+• Basic Price: {clean_html(format_price(price_base))} (From {clean_html(price_source)})
+• Net Price: {clean_html(format_price(price_net))}
+• Sell Out Price: {clean_html(format_price(price_sellout))}
 <b>Date:</b> {clean_html(date_val)}
 <b>Note:</b> {clean_html(note)}
     """
 
-    # --- 3A. EXACT SENIOR REPORT (Still 17 Columns) ---
+    # --- 3A. EXACT SENIOR REPORT (17 Columns) ---
     row_data = [
         scheme_raw,                 # A: Promotion
         s_val,                      # B: Scheme
@@ -163,7 +205,7 @@ def handle_webhook():
         posm,                       # D: POSM
         price_base,                 # E: Price before promotion
         note,                       # F: Others
-        channel,                    # G: Channel
+        channel_clean,              # G: Channel (Using clean name without sub_channel here)
         "",                         # H: Function (Blank)
         date_val,                   # I: Date
         region,                     # J: Region
@@ -177,7 +219,6 @@ def handle_webhook():
         kobo_id                     # R: Kobo ID
     ]
     
-    # Convert 'None' to empty string for Google Sheets
     row_data = ["" if v is None else v for v in row_data]
     
     try:
@@ -188,16 +229,16 @@ def handle_webhook():
         else:
             clean_sheet.append_row(row_data)
     except Exception as e:
-        print(f"REPORT SHEET ERROR: {e}")
+        print(f"❌ REPORT SHEET ERROR: {e}")
 
-    # --- 3B. RAW DATA BACKUP (Wrapped in Safety Net) ---
+    # --- 3B. RAW DATA BACKUP ---
     try:
         raw_sheet.append_row([date_val, kobo_id, json.dumps(data)])
     except Exception as e:
-        print(f"RAW SHEET ERROR: {e}")
+        print(f"❌ RAW SHEET ERROR: {e}")
 
     # --- 4. SEND TELEGRAM ---
-    send_telegram_with_photo(telegram_msg, photo1)
+    send_telegram_media_group(telegram_msg, photo_urls)
 
     return jsonify({"status": "success"}), 200
 
