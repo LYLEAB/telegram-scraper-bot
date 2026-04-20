@@ -71,7 +71,7 @@ def send_telegram_media_group(message, photo_urls):
     if len(valid_urls) == 0:
         url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
         payload = {"chat_id": TELEGRAM_CHAT_ID, "text": message, "parse_mode": "HTML", "disable_web_page_preview": True}
-        requests.post(url, json=payload)
+        requests.post(url, json=payload, timeout=15)
         return
 
     # 1. Download images to memory to bypass Telegram URL blocking
@@ -90,7 +90,7 @@ def send_telegram_media_group(message, photo_urls):
                 media.append({
                     "type": "photo",
                     "media": f"attach://{filename}",
-                    "caption": message if i == 0 else "",
+                    "caption": message if len(media) == 0 else "", # Caption only on the first actual downloaded image
                     "parse_mode": "HTML"
                 })
         except Exception as e:
@@ -101,17 +101,23 @@ def send_telegram_media_group(message, photo_urls):
         if len(media) == 0:
             # Fallback if download totally failed
             fallback_msg = message + "\n\n📷 <b>Photo Links:</b>\n" + "\n".join(valid_urls)
-            requests.post(f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage", json={"chat_id": TELEGRAM_CHAT_ID, "text": fallback_msg, "parse_mode": "HTML"})
+            requests.post(f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage", json={"chat_id": TELEGRAM_CHAT_ID, "text": fallback_msg, "parse_mode": "HTML"}, timeout=15)
+        
         elif len(media) == 1:
+            # Safe Single Photo Upload
             url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendPhoto"
-            files = {'photo': downloaded_files["photo0.jpg"]}
+            first_filename = list(downloaded_files.keys())[0] # Fixes the missing image bug!
+            files = {'photo': downloaded_files[first_filename]}
             data = {"chat_id": TELEGRAM_CHAT_ID, "caption": message, "parse_mode": "HTML"}
-            requests.post(url, data=data, files=files)
+            requests.post(url, data=data, files=files, timeout=15)
+            
         else:
+            # Album Upload
             url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMediaGroup"
             files = {name: content for name, content in downloaded_files.items()}
             data = {"chat_id": TELEGRAM_CHAT_ID, "media": json.dumps(media)}
-            requests.post(url, data=data, files=files)
+            requests.post(url, data=data, files=files, timeout=20)
+            
     except Exception as e:
         print(f"❌ TELEGRAM UPLOAD FAILED: {e}")
 
@@ -160,16 +166,14 @@ def handle_webhook():
     f_prod = scheme_parts[1] if len(scheme_parts) > 1 else ""
     posm = "+".join(scheme_parts[2:]) if len(scheme_parts) > 2 else ""
 
-    # --- BRAND FORMATTING (Capitalizing ED, CSD, and ml) ---
+    # --- BRAND FORMATTING ---
     brand_raw = str(data.get('brand_select') or 'Unknown Brand')
     brand_clean = brand_raw.replace('_', ' ').title()
     
-    # Force uppercase for specific acronyms
     for prefix in ["Ed ", "Csd ", "Med ", "Rtd ", "Scsd "]:
         if prefix in brand_clean:
             brand_clean = brand_clean.replace(prefix, prefix.upper())
             
-    # Fix the 'Ml' to 'ml'
     brand_clean = brand_clean.replace('Ml', 'ml')
     
     pack_match = re.search(r'(Can|Pint|PET|Bottle)[\s_]*[\d\.]+[a-zA-Z]+', brand_clean, re.IGNORECASE)
