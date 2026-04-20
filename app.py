@@ -316,17 +316,19 @@ def handle_webhook():
 <b>Date:</b> {clean_html(date_val)}
 <b>Note:</b> {clean_html(note)}"""
 
-    # --- 3. GOOGLE SHEETS INJECTION ---
+# --- 3. GOOGLE SHEETS INJECTION ---
     try:
-        existing_ids = clean_sheet.col_values(18) 
+        existing_ids = clean_sheet.col_values(18) # Looks ONLY at Column R (Kobo ID)
         
-        # Calculate exactly what row we are working on so the formula perfectly aligns!
+        # Calculate exactly what row we are working on
         if kobo_id in existing_ids:
+            # If ID exists, update that specific row (Duplicate Protection)
             row_index = existing_ids.index(kobo_id) + 1
         else:
-            row_index = len(existing_ids) + 1
+            # If it's a new ID, find the true bottom of Column R
+            row_index = len(existing_ids) + 1 
 
-        # The Senior's exact formula! Wrapped in IFERROR to prevent ugly #DIV/0! errors if data is blank.
+        # The Senior's exact formula perfectly synced!
         pap_formula = f"=IFERROR(($E{row_index}*$B{row_index})/SUM($B{row_index}:$C{row_index}), 0)"
 
         row_data = [
@@ -336,11 +338,9 @@ def handle_webhook():
         ]
         row_data = ["" if v is None else v for v in row_data]
         
-        # Added value_input_option='USER_ENTERED' so Sheets recognizes the formula!
-        if kobo_id in existing_ids:
-            clean_sheet.update(f'A{row_index}:R{row_index}', [row_data], value_input_option='USER_ENTERED')
-        else:
-            clean_sheet.append_row(row_data, value_input_option='USER_ENTERED')
+        # We use strict "update" instead of "append_row"
+        clean_sheet.update(f'A{row_index}:R{row_index}', [row_data], value_input_option='USER_ENTERED')
+        
     except Exception as e:
         print(f"❌ REPORT SHEET ERROR: {e}")
 
