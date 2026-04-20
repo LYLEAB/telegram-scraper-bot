@@ -86,18 +86,30 @@ def handle_webhook():
     date_val = (data.get('start') or '')[:10]
     region = str(data.get('region') or 'N/A').upper()
     dealer = str(data.get('dealer_select') or 'N/A').upper()
+    
+    # Capture Channel & Sub-channel
     channel = data.get('channel') or 'N/A'
+    sub_channel = data.get('sub_channel') or 'N/A'
+    
     category = str(data.get('category') or '').upper()
     type_val = str(data.get('type_select') or 'N/A').upper()
     note = str(data.get('note_remark') or '')
 
+    # Location
     village = data.get('village') or 'N/A'
     commune = data.get('commune') or 'N/A'
     district = data.get('district') or 'N/A'
     province = data.get('province') or 'N/A'
 
+    # Capture all Prices & Sources for your custom Telegram message
     price_base = data.get('price_base')
     price_net = data.get('price_net')
+    price_sellout = data.get('price_sellout')
+    price_source = data.get('price_source') or 'N/A'
+    
+    base_price_str = format_price(price_base)
+    net_price_str = format_price(price_net)
+    sellout_price_str = format_price(price_sellout)
 
     scheme_raw = str(data.get('scheme') or '')
     scheme_parts = scheme_raw.split('+')
@@ -127,23 +139,23 @@ def handle_webhook():
         if len(coords) >= 2:
             map_link = f"http://maps.google.com/maps?q={coords[0]},{coords[1]}"
 
-    # --- 2. TELEGRAM MESSAGE (Wrapped in clean_html) ---
+    # --- 2. TELEGRAM MESSAGE (Wrapped in clean_html for safety) ---
     telegram_msg = f"""
-<b>Promotion of: {brand}</b>
-<b>Region:</b> {region} (Dealer: {dealer}), 
-<b>Location:</b> {village}, {commune}, {district}, {province}
+<b>Promotion of: {clean_html(brand_clean)}</b>
+<b>Region:</b> {clean_html(region)} (Dealer: {clean_html(dealer)}), 
+<b>Location:</b> {clean_html(village)}, {clean_html(commune)}, {clean_html(district)}, {clean_html(province)}
 <b>Location Map:</b> <a href='{map_link}'>Open Google Maps</a>
-<b>Channel:</b> {channel} (<i>{sub_channel}</i>)
-<b>Type:</b> {type_val}
-<b>Scheme:</b> {scheme_raw}
-• Basic Price: {base_price_str} (From {price_source})
-• Net Price: {net_price_str}
-• Sell Out Price: {sellout_price_str}
-<b>Date:</b> {date_val}
-<b>Note:</b> {note}
+<b>Channel:</b> {clean_html(channel)} (<i>{clean_html(sub_channel)}</i>)
+<b>Type:</b> {clean_html(type_val)}
+<b>Scheme:</b> {clean_html(scheme_raw)}
+• Basic Price: {clean_html(base_price_str)} (From {clean_html(price_source)})
+• Net Price: {clean_html(net_price_str)}
+• Sell Out Price: {clean_html(sellout_price_str)}
+<b>Date:</b> {clean_html(date_val)}
+<b>Note:</b> {clean_html(note)}
     """
 
-    # --- 3A. EXACT SENIOR REPORT ---
+    # --- 3A. EXACT SENIOR REPORT (Still 17 Columns) ---
     row_data = [
         scheme_raw,                 # A: Promotion
         s_val,                      # B: Scheme
@@ -176,13 +188,13 @@ def handle_webhook():
         else:
             clean_sheet.append_row(row_data)
     except Exception as e:
-        print(f"❌ REPORT SHEET ERROR: {e}")
+        print(f"REPORT SHEET ERROR: {e}")
 
     # --- 3B. RAW DATA BACKUP (Wrapped in Safety Net) ---
     try:
         raw_sheet.append_row([date_val, kobo_id, json.dumps(data)])
     except Exception as e:
-        print(f"❌ RAW SHEET ERROR: {e}")
+        print(f"RAW SHEET ERROR: {e}")
 
     # --- 4. SEND TELEGRAM ---
     send_telegram_with_photo(telegram_msg, photo1)
