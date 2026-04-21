@@ -25,19 +25,13 @@ clean_sheet = doc.sheet1
 try:
     raw_sheet = doc.worksheet("Raw Data")
 except gspread.exceptions.WorksheetNotFound:
-    raw_sheet = doc.add_worksheet(title="Raw Data", rows="1000", cols="3")
+    raw_sheet = doc.add_worksheet(title="Raw Data", rows="1000", cols="50")
     raw_sheet.append_row(["Date", "Kobo ID", "Full Raw Code"])
 
 # --- DICTIONARIES FOR KOBO DATA TRANSLATION ---
 CATEGORY_MAP = {
-    "beer": "Beer",
-    "ed": "ED",
-    "med": "MED",
-    "csd": "CSD",
-    "scsd": "SCSD",
-    "isotonic": "Isotonic",
-    "rtd_tea": "RTD Tea",
-    "water": "Water"
+    "beer": "Beer", "ed": "ED", "med": "MED", "csd": "CSD", "scsd": "SCSD",
+    "isotonic": "Isotonic", "rtd_tea": "RTD Tea", "water": "Water"
 }
 
 PROVINCE_MAP = {
@@ -237,6 +231,19 @@ def to_number(val):
     except ValueError:
         return clean_val
 
+def format_packaging(pack_str):
+    if not pack_str:
+        return ""
+    pack_str = pack_str.title().replace('Pet', 'PET').replace('Ml', 'ml')
+    match = re.search(r'([\d\.]+)\s*ml', pack_str, re.IGNORECASE)
+    if match:
+        ml_val = float(match.group(1))
+        if ml_val >= 1000:
+            l_val = ml_val / 1000
+            l_str = f"{l_val:g}L"
+            pack_str = re.sub(r'[\d\.]+\s*ml', l_str, pack_str, flags=re.IGNORECASE)
+    return pack_str
+
 def clean_html(text):
     if text is None:
         return ""
@@ -302,7 +309,7 @@ def handle_webhook():
     region = str(data.get('region_select') or data.get('region') or 'N/A').upper()
     dealer = str(data.get('dealer_select') or 'N/A').upper()
     
-    # --- Category mapped exactly to Kobo form label ---
+    # --- Exact Category Match ---
     cat_raw = str(data.get('category') or '').lower().strip()
     category = CATEGORY_MAP.get(cat_raw, cat_raw.title().replace('_', ' '))
     
@@ -345,10 +352,8 @@ def handle_webhook():
     # --- BRAND & PACKAGING FORMATTING ---
     brand_raw = str(data.get('brand_select') or 'Unknown Brand')
     
-    # 1. Map directly to exact Kobo Form Label
     brand_clean = BRAND_MAP.get(brand_raw, brand_raw.replace('_', ' ').title())
     
-    # 2. Convert 1000ml or higher to Liters across ANY brand smoothly
     match = re.search(r'([\d\.]+)\s*ml', brand_clean, re.IGNORECASE)
     if match:
         ml_val = float(match.group(1))
@@ -357,10 +362,8 @@ def handle_webhook():
             l_str = f"{l_val:g}L"
             brand_clean = re.sub(r'[\d\.]+\s*ml', l_str, brand_clean, flags=re.IGNORECASE)
 
-    # 3. Clean up generic caps in case of unmapped items
     brand_clean = brand_clean.replace('Pet', 'PET').replace('Ml', 'ml')
 
-    # 4. Extract pure packaging to its own column cleanly (e.g., "PET 1.5L" or "Can 330ml")
     pack_match = re.search(r'(Can|Pint|PET|Bottle)[\s_]*[\d\.]+[a-zA-Z]+', brand_clean, re.IGNORECASE)
     packaging = pack_match.group(0) if pack_match else ""
     
@@ -393,7 +396,7 @@ def handle_webhook():
 <b>Date:</b> {clean_html(date_val)}
 <b>Note:</b> {clean_html(note)}"""
 
-    # --- 3. GOOGLE SHEETS INJECTION ---
+    # --- 3A. EXACT SENIOR REPORT ---
     try:
         existing_ids = clean_sheet.col_values(18) 
         
@@ -416,10 +419,33 @@ def handle_webhook():
     except Exception as e:
         print(f"❌ REPORT SHEET ERROR: {e}")
 
+    # --- 3B. AUTO-EXPANDING RAW DATA SHEET ---
     try:
-        raw_sheet.append_row([date_val, kobo_id, json.dumps(data)])
+        flat_data = {"Date": date_val, "Kobo ID": kobo_id, "Full Raw Code": json.dumps(data, ensure_ascii=False)}
+        for key, value in data.items():
+            if isinstance(value, (dict, list)):
+                flat_data[key] = json.dumps(value, ensure_ascii=False)
+            else:
+                flat_data[key] = str(value)
+                
+        existing_headers = raw_sheet.row_values(1)
+        if not existing_headers:
+            existing_headers = ["Date", "Kobo ID", "Full Raw Code"]
+            
+        new_headers = [k for k in flat_data.keys() if k not in existing_headers]
+        if new_headers:
+            existing_headers.extend(new_headers)
+            try:
+                raw_sheet.add_cols(len(new_headers) + 10)
+            except:
+                pass
+            raw_sheet.update('A1', [existing_headers])
+            
+        raw_row_to_insert = [flat_data.get(h, "") for h in existing_headers]
+        raw_sheet.append_row(raw_row_to_insert, value_input_option='USER_ENTERED')
     except Exception as e:
-        pass
+        print(f"❌ RAW SHEET ERROR: {e}")
+        raw_sheet.append_row([date_val, kobo_id, json.dumps(data)])
 
     # --- 4. SEND TELEGRAM ---
     send_telegram_media_group(telegram_msg, photo_urls)
