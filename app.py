@@ -94,7 +94,7 @@ DISTRICT_MAP = {
     "pail": "Pailin", "malai": "Malai", "ouchrov": "Ou Chrov", "paoypaet": "Paoy Paet",
     "kandieng": "Kandieng", "krakor": "Krakor", "purs": "Pursat", 
     "phnumkravanh": "Phnum Kravanh", "talousenchey": "Ta Lou Senchey", 
-    "vealveaeng": "Veal Veaeng", "mongkolborei": "Mongkol Borei", 
+    "vealveaeng": "Veal Veaeng", "mongkolborei": "mongkol Borei", 
     "sereisaophoan": "Serei Saophoan", "svaychek": "Svay Chek", "thmapuok": "Thma Puok",
     "chikraeng": "Chi Kraeng", "soutrnikom": "Soutr Nikom", "svayleu": "Svay Leu",
     "kampongsvay": "Kampong Svay", "prasatballangk": "Prasat Ballangk",
@@ -231,19 +231,6 @@ def to_number(val):
     except ValueError:
         return clean_val
 
-def format_packaging(pack_str):
-    if not pack_str:
-        return ""
-    pack_str = pack_str.title().replace('Pet', 'PET').replace('Ml', 'ml')
-    match = re.search(r'([\d\.]+)\s*ml', pack_str, re.IGNORECASE)
-    if match:
-        ml_val = float(match.group(1))
-        if ml_val >= 1000:
-            l_val = ml_val / 1000
-            l_str = f"{l_val:g}L"
-            pack_str = re.sub(r'[\d\.]+\s*ml', l_str, pack_str, flags=re.IGNORECASE)
-    return pack_str
-
 def clean_html(text):
     if text is None:
         return ""
@@ -360,9 +347,24 @@ def handle_webhook():
     f_prod = to_number(scheme_parts[1] if len(scheme_parts) > 1 else "")
     posm = "+".join(scheme_parts[2:]) if len(scheme_parts) > 2 else ""
 
-    # --- BRAND & PACKAGING FORMATTING ---
+    # --- BRAND & PACKAGING FORMATTING (WITH SAFETY NET RESTORED) ---
     brand_raw = str(data.get('brand_select') or 'Unknown Brand')
-    brand_clean = BRAND_MAP.get(brand_raw, brand_raw.replace('_', ' ').title())
+    
+    if brand_raw in BRAND_MAP:
+        brand_clean = BRAND_MAP[brand_raw]
+    else:
+        # THE SAFETY NET: Intelligently strip prefixes for unknown/new brands
+        clean_raw = brand_raw
+        prefixes = ["beer_", "csd_", "ed_", "isotonic_", "med_", "rtd_tea_", "scsd_", "water_"]
+        for p in prefixes:
+            if clean_raw.startswith(p):
+                clean_raw = clean_raw[len(p):]
+                break
+        
+        brand_clean = clean_raw.replace('_', ' ').title()
+        for acronym in ["Ed ", "Csd ", "Med ", "Rtd ", "Scsd ", "Abc "]:
+            if acronym in brand_clean:
+                brand_clean = brand_clean.replace(acronym, acronym.upper())
     
     match = re.search(r'([\d\.]+)\s*ml', brand_clean, re.IGNORECASE)
     if match:
@@ -456,12 +458,11 @@ def handle_webhook():
             
         raw_row_to_insert = [flat_data.get(h, "") for h in existing_headers]
         
-        # PRECISE ROW TARGETING TO AVOID OVERWRITES
-        existing_raw_ids = raw_sheet.col_values(2) # Column 2 is "Kobo ID"
+        existing_raw_ids = raw_sheet.col_values(2) 
         if kobo_id in existing_raw_ids:
             raw_row_index = existing_raw_ids.index(kobo_id) + 1
         else:
-            raw_row_index = len(raw_sheet.col_values(1)) + 1 # Counts Column A safely
+            raw_row_index = len(raw_sheet.col_values(1)) + 1 
             
         raw_sheet.update(f'A{raw_row_index}', [raw_row_to_insert], value_input_option='USER_ENTERED')
         
