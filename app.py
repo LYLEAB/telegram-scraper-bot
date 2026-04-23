@@ -304,12 +304,20 @@ def handle_webhook():
         return jsonify({"error": "No data received"}), 400
 
     kobo_id = str(data.get('_id'))
+    
+    # --- FETCH SUBMITTER NAME ---
+    rep_name = data.get('rep_name')
+    if rep_name == 'other':
+        submitter_raw = str(data.get('rep_name_other') or 'Unknown Rep')
+    else:
+        submitter_raw = str(rep_name or data.get('_submitted_by') or 'Unknown Rep')
+        
+    submitter = submitter_raw.replace('_', ' ').title()
 
     date_val = (data.get('start') or '')[:10]
     region = str(data.get('region_select') or data.get('region') or 'N/A').upper()
     dealer = str(data.get('dealer_select') or 'N/A').upper()
     
-    # --- Exact Category Match ---
     cat_raw = str(data.get('category') or '').lower().strip()
     category = CATEGORY_MAP.get(cat_raw, cat_raw.title().replace('_', ' '))
     
@@ -339,7 +347,10 @@ def handle_webhook():
     # --- PRICES & SCHEME ---
     price_base = data.get('price_base')
     price_net = data.get('price_net')
-    price_sellout = data.get('price_sellout')
+    
+    price_sellout_seller = data.get('price_sellout_seller')
+    price_sellout_consumer = data.get('price_sellout_consumer')
+    
     price_source = str(data.get('price_source') or 'N/A').title()
 
     scheme_raw = str(data.get('scheme') or '')
@@ -351,7 +362,6 @@ def handle_webhook():
 
     # --- BRAND & PACKAGING FORMATTING ---
     brand_raw = str(data.get('brand_select') or 'Unknown Brand')
-    
     brand_clean = BRAND_MAP.get(brand_raw, brand_raw.replace('_', ' ').title())
     
     match = re.search(r'([\d\.]+)\s*ml', brand_clean, re.IGNORECASE)
@@ -383,7 +393,9 @@ def handle_webhook():
             map_link = f"http://maps.google.com/maps?q={coords[0]},{coords[1]}"
 
     # --- 2. EXACT TELEGRAM MESSAGE FORMAT ---
-    telegram_msg = f"""<b>Promotion of:</b> {clean_html(brand_final)}
+    telegram_msg = f"""👤 <b>Submitted by:</b> {clean_html(submitter)}
+
+<b>Promotion of:</b> {clean_html(brand_final)}
 <b>Region:</b> {clean_html(region)}
 <b>Dealer:</b> {clean_html(dealer)}
 <b>Location:</b> {clean_html(village)}, {clean_html(commune)}, {clean_html(district)}, {clean_html(province)}
@@ -392,11 +404,12 @@ def handle_webhook():
 <b>Scheme:</b> {clean_html(scheme_raw)}
 • Basic Price: {clean_html(format_price(price_base))} (From {clean_html(price_source)})
 • Net Price: {clean_html(format_price(price_net))}
-• Sell Out Price: {clean_html(format_price(price_sellout))}
+• Sell Out Price to seller (អ្នកលក់): {clean_html(format_price(price_sellout_seller))}
+• Sell Out Price to consumer (អ្នកផឹក): {clean_html(format_price(price_sellout_consumer))}
 <b>Date:</b> {clean_html(date_val)}
 <b>Note:</b> {clean_html(note)}"""
 
-    # --- 3A. EXACT SENIOR REPORT ---
+    # --- 3A. EXACT SENIOR REPORT (UNTOUCHED) ---
     try:
         existing_ids = clean_sheet.col_values(18) 
         
@@ -442,10 +455,18 @@ def handle_webhook():
             raw_sheet.update('A1', [existing_headers])
             
         raw_row_to_insert = [flat_data.get(h, "") for h in existing_headers]
-        raw_sheet.append_row(raw_row_to_insert, value_input_option='USER_ENTERED')
+        
+        # PRECISE ROW TARGETING TO AVOID OVERWRITES
+        existing_raw_ids = raw_sheet.col_values(2) # Column 2 is "Kobo ID"
+        if kobo_id in existing_raw_ids:
+            raw_row_index = existing_raw_ids.index(kobo_id) + 1
+        else:
+            raw_row_index = len(raw_sheet.col_values(1)) + 1 # Counts Column A safely
+            
+        raw_sheet.update(f'A{raw_row_index}', [raw_row_to_insert], value_input_option='USER_ENTERED')
+        
     except Exception as e:
         print(f"❌ RAW SHEET ERROR: {e}")
-        raw_sheet.append_row([date_val, kobo_id, json.dumps(data)])
 
     # --- 4. SEND TELEGRAM ---
     send_telegram_media_group(telegram_msg, photo_urls)
