@@ -1,5 +1,9 @@
 creds.json
 *.session
 __pycache__/
+*.pyc
+.env
+.env.local
+seed.json
 
 firebase_creds.json
