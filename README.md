@@ -21,10 +21,14 @@ This repository now supports an internal company form submission pipeline built 
 
 ## Database setup (Supabase)
 
-Run migration SQL in Supabase SQL editor or via Supabase CLI:
+Choose one option:
 
-```sql
-\i supabase/migrations/20260622101500_internal_form_pipeline.sql
+1. **Supabase Dashboard (manual):** open SQL Editor and run the SQL from `supabase/migrations/20260622101500_internal_form_pipeline.sql`.
+2. **Supabase CLI:**
+
+```bash
+supabase link --project-ref <your-project-ref>
+supabase db push
 ```
 
 The migration creates:
@@ -39,7 +43,7 @@ The migration creates:
 1. Parse the Kobo choices TSV:
 
 ```bash
-python scripts/parse_kobo_tsv.py /absolute/path/to/choices.tsv --output /absolute/path/to/seed.json
+python scripts/parse_kobo_tsv.py "/absolute/path/Promotion Program via Form - survey (1).tsv" --output ./seed.json
 ```
 
 2. Seed Supabase reference data:
@@ -47,7 +51,7 @@ python scripts/parse_kobo_tsv.py /absolute/path/to/choices.tsv --output /absolut
 ```bash
 export SUPABASE_URL="https://YOUR_PROJECT.supabase.co"
 export SUPABASE_SERVICE_ROLE_KEY="YOUR_SERVICE_ROLE_KEY"
-python scripts/seed_supabase.py --seed /absolute/path/to/seed.json
+python scripts/seed_supabase.py --seed ./seed.json --chunk-size 500
 ```
 
 `seed_supabase.py` upserts in dependency-safe order and prints actionable errors if any request fails.
@@ -69,6 +73,7 @@ Path: `supabase/functions/send-telegram/index.ts`
 ### Deploy
 
 ```bash
+supabase link --project-ref <your-project-ref>
 supabase functions deploy send-telegram
 ```
 
@@ -93,19 +98,72 @@ The function fetches submission + labels from reference tables, sends Telegram m
 
 ## Environment variables
 
+Variable names are shared across code/docs exactly as below:
+
+- **Next.js API route (`app/api/submit/route.ts`)**
+  - `SUPABASE_URL`
+  - `SUPABASE_SERVICE_ROLE_KEY`
+  - `TELEGRAM_EDGE_FUNCTION_URL` (optional for async Telegram trigger)
+  - `TELEGRAM_EDGE_FUNCTION_SECRET` (optional for async Telegram trigger)
+- **Supabase Edge Function (`supabase/functions/send-telegram/index.ts`)**
+  - `FUNCTION_SECRET` (must match `TELEGRAM_EDGE_FUNCTION_SECRET`)
+  - `SUPABASE_URL`
+  - `SUPABASE_SERVICE_ROLE_KEY`
+  - `TELEGRAM_BOT_TOKEN`
+  - `TELEGRAM_CHAT_ID`
+
+Set these in:
+
+- **Vercel Project Settings → Environment Variables** (Next.js route vars)
+- **Supabase Function Secrets** (edge function vars)
+
 See `.env.example` for placeholders only.
 
 Never commit real secrets (Telegram tokens, Supabase keys, service role keys).
 
-## End-to-end test checklist
+## Run locally and test end-to-end
 
-1. Run migration in Supabase.
-2. Generate + seed reference data from Kobo TSV.
-3. Submit sample payload to `POST /api/submit`.
-4. Verify response contains `submission_id`.
-5. Verify row in `submissions` is created.
-6. Verify Telegram group receives message.
-7. Verify `notification_status` transitions to `sent` or `failed` with `notification_error` populated on failure.
+1. **Manual (Supabase):** run migration SQL from `supabase/migrations/20260622101500_internal_form_pipeline.sql`.
+2. Parse Kobo TSV and create seed data:
+   ```bash
+   python scripts/parse_kobo_tsv.py "/absolute/path/Promotion Program via Form - survey (1).tsv" --output ./seed.json
+   ```
+3. Seed reference tables:
+   ```bash
+   export SUPABASE_URL="https://YOUR_PROJECT.supabase.co"
+   export SUPABASE_SERVICE_ROLE_KEY="YOUR_SERVICE_ROLE_KEY"
+   python scripts/seed_supabase.py --seed ./seed.json
+   ```
+4. **Manual (Supabase):** deploy function and set secrets:
+   ```bash
+   supabase link --project-ref <your-project-ref>
+   supabase functions deploy send-telegram
+   supabase secrets set \
+     FUNCTION_SECRET=your_function_secret \
+     SUPABASE_URL=https://your-project-ref.supabase.co \
+     SUPABASE_SERVICE_ROLE_KEY=your_service_role_key \
+     TELEGRAM_BOT_TOKEN=your_bot_token \
+     TELEGRAM_CHAT_ID=your_group_chat_id
+   ```
+5. **Manual (Vercel):** set env vars (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `TELEGRAM_EDGE_FUNCTION_URL`, `TELEGRAM_EDGE_FUNCTION_SECRET`) and redeploy.
+6. Submit a payload to `POST /api/submit`.
+7. Verify:
+   - API response includes `submission_id`
+   - `submissions` row exists
+   - Telegram message arrives
+   - `notification_status` becomes `sent` (or `failed` with `notification_error`)
+
+## Troubleshooting
+
+- **Missing env vars**
+  - Next.js route returns `Missing environment variable: ...` when Vercel env vars are absent.
+  - Edge function returns `Missing env var: ...` when Supabase function secrets are absent.
+- **Invalid Telegram chat id**
+  - Function responds with `Telegram send failed` and stores API error text in `submissions.notification_error`.
+  - Ensure the bot is in the target group/channel and `TELEGRAM_CHAT_ID` is correct.
+- **Unauthorized function secret**
+  - If `TELEGRAM_EDGE_FUNCTION_SECRET` (Vercel) does not match `FUNCTION_SECRET` (Supabase), function responds `401 Unauthorized`.
+  - Update both to the same value and redeploy/retry.
 
 ## Notes for this repository
 
