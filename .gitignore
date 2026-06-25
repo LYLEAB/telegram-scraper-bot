@@ -1,9 +1,32 @@
+# Python
 creds.json
 *.session
 __pycache__/
 *.pyc
+firebase_creds.json
+
+# Environment / secrets
 .env
 .env.local
-seed.json
+.env*.local
 
-firebase_creds.json
+# Seeding data (generated files)
+seed.json
+seed_data.sql
+
+# Next.js build output
+.next/
+out/
+node_modules/
+
+# TypeScript build info
+*.tsbuildinfo
+next-env.d.ts
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/

@@ -62,7 +62,7 @@ create table if not exists price_sources (
 create table if not exists submissions (
   id uuid primary key default gen_random_uuid(),
   submitted_by text not null,
-  type_select_code text references type_selects(code),
+  type_select_code text not null references type_selects(code),
   region_code text references regions(code),
   dealer_code text references dealers(code),
   province_code text references provinces(code),

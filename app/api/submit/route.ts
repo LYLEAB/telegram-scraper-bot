@@ -11,6 +11,7 @@ const REQUIRED_FIELDS = [
   'channel_code',
   'sub_channel_code',
   'price_source_code',
+  'type_select_code',
 ] as const;
 
 function readEnv(name: string): string {
