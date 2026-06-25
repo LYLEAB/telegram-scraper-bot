@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Parse Kobo choices TSV and generate normalized seed JSON."""
 
 from __future__ import annotations
