@@ -11,9 +11,6 @@ export function validateForm(state: FormState): ValidationErrors {
     errors.submitted_by = 'Staff name is required.';
   }
 
-  if (!state.submission_date) {
-    errors.submission_date = 'Submission date is required.';
-  }
 
   if (!state.region_code) {
     errors.region_code = 'Region selection is required.';

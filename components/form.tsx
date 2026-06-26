@@ -57,7 +57,6 @@ export default function Form({ referenceData }: FormProps) {
     setSubmitting(true);
     const payload = {
       submitted_by:           formState.submitted_by.trim(),
-      submission_date:        formState.submission_date,
       region_code:            formState.region_code,
       dealer_code:            formState.dealer_code,
       province_code:          formState.province_code,
@@ -110,7 +109,6 @@ export default function Form({ referenceData }: FormProps) {
     return (
       <div className="card">
         <div className="success-card">
-          <span className="success-icon">🎉</span>
           <h2>Report Submitted!</h2>
           <p>
             Pricing data saved to the database. A Telegram alert has been sent to the operations group.
@@ -130,7 +128,7 @@ export default function Form({ referenceData }: FormProps) {
       {serverError && (
         <div className="form-section" style={{ paddingBottom: '0.5rem' }}>
           <div className="alert alert-warning" role="alert">
-            ⚠️ <strong>Error:</strong> {serverError}
+            <strong>Error:</strong> {serverError}
           </div>
         </div>
       )}
@@ -140,10 +138,10 @@ export default function Form({ referenceData }: FormProps) {
         {/* ── Section 1: Submitter ──────────────── */}
         <div className="form-section">
           <div className="section-header">
-            <span className="section-icon">👤</span>
             <h2 className="section-title">Submitter Info</h2>
           </div>
           <div className="grid-2">
+            <div className="form-group" style={{ gridColumn: '1 / -1' }}>
             <div className="form-group">
               <label className="form-label" htmlFor="submitted_by">Staff Name *</label>
               <input
@@ -157,26 +155,12 @@ export default function Form({ referenceData }: FormProps) {
               />
               {errors.submitted_by && <span className="error-message">{errors.submitted_by}</span>}
             </div>
-
-            <div className="form-group">
-              <label className="form-label" htmlFor="submission_date">Report Date *</label>
-              <input
-                className={`form-input ${errors.submission_date ? 'input-error' : ''}`}
-                type="date"
-                id="submission_date"
-                name="submission_date"
-                value={formState.submission_date}
-                onChange={(e) => onFieldChange('submission_date', e.target.value)}
-              />
-              {errors.submission_date && <span className="error-message">{errors.submission_date}</span>}
-            </div>
           </div>
         </div>
 
         {/* ── Section 2: Location ───────────────── */}
         <div className="form-section">
           <div className="section-header">
-            <span className="section-icon">📍</span>
             <h2 className="section-title">Location &amp; Dealer</h2>
           </div>
           <LocationSelect
@@ -190,7 +174,6 @@ export default function Form({ referenceData }: FormProps) {
         {/* ── Section 3: Product & Channel ─────── */}
         <div className="form-section">
           <div className="section-header">
-            <span className="section-icon">🛍️</span>
             <h2 className="section-title">Product &amp; Channel</h2>
           </div>
 
@@ -205,7 +188,7 @@ export default function Form({ referenceData }: FormProps) {
                 value={formState.category_code}
                 onChange={(e) => onFieldChange('category_code', e.target.value)}
               >
-                <option value="">🗂 Select Category</option>
+                <option value="">Select Category</option>
                 {referenceData.categories.map((cat) => (
                   <option key={cat.code} value={cat.code}>{cat.label}</option>
                 ))}
@@ -228,8 +211,8 @@ export default function Form({ referenceData }: FormProps) {
               >
                 <option value="">
                   {!formState.category_code
-                    ? '⬆ Select Category First'
-                    : `🏷 Select Brand (${filteredBrands.length})`}
+                    ? 'Select Category First'
+                    : `Select Brand (${filteredBrands.length})`}
                 </option>
                 {filteredBrands.map((b) => (
                   <option key={b.code} value={b.code}>{b.label}</option>
@@ -250,7 +233,7 @@ export default function Form({ referenceData }: FormProps) {
                 value={formState.type_select_code}
                 onChange={(e) => onFieldChange('type_select_code', e.target.value)}
               >
-                <option value="">📦 Select Packaging</option>
+                <option value="">Select Packaging</option>
                 {referenceData.type_selects.map((t) => (
                   <option key={t.code} value={t.code}>{t.label}</option>
                 ))}
@@ -267,7 +250,7 @@ export default function Form({ referenceData }: FormProps) {
                 value={formState.channel_code}
                 onChange={(e) => onFieldChange('channel_code', e.target.value)}
               >
-                <option value="">🏪 Select Channel</option>
+                <option value="">Select Channel</option>
                 {referenceData.channels.map((c) => (
                   <option key={c.code} value={c.code}>{c.label}</option>
                 ))}
@@ -286,7 +269,7 @@ export default function Form({ referenceData }: FormProps) {
               value={formState.sub_channel_code}
               onChange={(e) => onFieldChange('sub_channel_code', e.target.value)}
             >
-              <option value="">🏬 Select Sub-Channel</option>
+              <option value="">Select Sub-Channel</option>
               {referenceData.sub_channels.map((s) => (
                 <option key={s.code} value={s.code}>{s.label}</option>
               ))}
@@ -298,7 +281,6 @@ export default function Form({ referenceData }: FormProps) {
         {/* ── Section 4: Prices ────────────────── */}
         <div className="form-section">
           <div className="section-header">
-            <span className="section-icon">💵</span>
             <h2 className="section-title">Price Details</h2>
           </div>
           <PriceFields
@@ -312,7 +294,6 @@ export default function Form({ referenceData }: FormProps) {
         {/* ── Section 5: Scheme & Note ──────────── */}
         <div className="form-section">
           <div className="section-header">
-            <span className="section-icon">📝</span>
             <h2 className="section-title">Promotion &amp; Notes</h2>
           </div>
           <div className="form-group" style={{ marginBottom: '0.875rem' }}>
@@ -345,7 +326,6 @@ export default function Form({ referenceData }: FormProps) {
         {/* ── Section 6: GPS ────────────────────── */}
         <div className="form-section">
           <div className="section-header">
-            <span className="section-icon">🛰️</span>
             <h2 className="section-title">GPS Location</h2>
           </div>
           <div className="gps-row">
@@ -386,7 +366,7 @@ export default function Form({ referenceData }: FormProps) {
                 disabled={gpsLoading}
                 title="Auto-detect GPS coordinates"
               >
-                {gpsLoading ? <span className="spinner" /> : '📍'}
+                {gpsLoading ? <span className="spinner" /> : null}
                 {gpsLoading ? 'Locating…' : 'Get GPS'}
               </button>
             </div>
@@ -401,7 +381,7 @@ export default function Form({ referenceData }: FormProps) {
                 <span className="spinner" /> Submitting Report…
               </span>
             ) : (
-              '🚀 Submit Pricing Report'
+              'Submit Pricing Report'
             )}
           </button>
         </div>

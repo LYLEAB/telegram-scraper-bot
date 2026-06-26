@@ -14,7 +14,6 @@ export interface ReferenceData {
 
 export const INITIAL_FORM_STATE = {
   submitted_by: '',
-  submission_date: '',
   region_code: '',
   dealer_code: '',
   province_code: '',

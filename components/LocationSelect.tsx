@@ -90,7 +90,7 @@ export const LocationSelect: React.FC<LocationSelectProps> = ({
               value={formState.province_code}
               onChange={handleProvinceChange}
             >
-              <option value="">📍 Select Province</option>
+              <option value="">Select Province</option>
               {referenceData.provinces.map((prov) => (
                 <option key={prov.code} value={prov.code}>
                   {prov.label}
@@ -118,7 +118,7 @@ export const LocationSelect: React.FC<LocationSelectProps> = ({
               disabled={!formState.province_code}
             >
               <option value="">
-                {!formState.province_code ? '⬆ Select Province First' : '🏘 Select District'}
+                {!formState.province_code ? 'Select Province First' : 'Select District'}
               </option>
               {filteredDistricts.map((dist) => (
                 <option key={dist.code} value={dist.code}>
@@ -151,10 +151,10 @@ export const LocationSelect: React.FC<LocationSelectProps> = ({
             >
               <option value="">
                 {!formState.district_code
-                  ? '⬆ Select District First'
+                  ? 'Select District First'
                   : filteredDealers.length === 0
                   ? 'No Dealers in this District'
-                  : `🏪 Select Dealer (${filteredDealers.length})`}
+                  : `Select Dealer (${filteredDealers.length})`}
               </option>
               {filteredDealers.map((deal) => (
                 <option key={deal.code} value={deal.code}>
@@ -174,7 +174,6 @@ export const LocationSelect: React.FC<LocationSelectProps> = ({
           <div className={`region-display ${selectedRegion ? 'region-filled' : 'region-empty'}`}>
             {selectedRegion ? (
               <>
-                <span className="region-icon">✅</span>
                 <span className="region-label">{selectedRegion.label}</span>
               </>
             ) : (

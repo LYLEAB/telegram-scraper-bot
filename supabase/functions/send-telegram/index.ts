@@ -108,7 +108,7 @@ Deno.serve(async (req) => {
 
     const mapUrl =
       submission.lat !== null && submission.lng !== null
-        ? `http://maps.google.com/maps?q=${submission.lat},${submission.lng}`
+        ? `Open Google Maps (http://maps.google.com/maps?q=${submission.lat},${submission.lng})`
         : '-';
 
     const lines = [

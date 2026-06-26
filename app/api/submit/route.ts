@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 
 const REQUIRED_FIELDS = [
   'submitted_by',
-  'submission_date',
   'region_code',
   'dealer_code',
   'province_code',
@@ -35,6 +34,10 @@ export async function POST(request: Request) {
     const supabaseUrl = readEnv('SUPABASE_URL');
     const serviceRoleKey = readEnv('SUPABASE_SERVICE_ROLE_KEY');
 
+    // Auto-set submission date using Cambodia time (ICT = UTC+7)
+    const ictDate = new Date(Date.now() + 7 * 60 * 60 * 1000);
+    const submission_date = ictDate.toISOString().split('T')[0];
+
     const insertPayload = {
       submitted_by: body.submitted_by,
       type_select_code: body.type_select_code ?? null,
@@ -51,7 +54,7 @@ export async function POST(request: Request) {
       net_price: body.net_price ?? null,
       sellout_price_seller: body.sellout_price_seller ?? null,
       sellout_price_consumer: body.sellout_price_consumer ?? null,
-      submission_date: body.submission_date,
+      submission_date,
       note: body.note ?? null,
       lat: body.lat ?? null,
       lng: body.lng ?? null,
