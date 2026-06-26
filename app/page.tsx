@@ -2,7 +2,7 @@ import React from 'react';
 import { fetchReferenceData } from '../lib/supabase';
 import Form from '../components/form';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 3600;
 
 export default async function Page() {
   let referenceData = null;

@@ -22,7 +22,7 @@ async function fetchTable(
         Authorization: `Bearer ${serviceRoleKey}`,
         'Content-Type': 'application/json',
       },
-      cache: 'no-store',
+      next: { revalidate: 3600 },
       signal: controller.signal,
     });
 
