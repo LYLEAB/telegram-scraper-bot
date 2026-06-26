@@ -142,7 +142,6 @@ export default function Form({ referenceData }: FormProps) {
           </div>
           <div className="grid-2">
             <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-            <div className="form-group">
               <label className="form-label" htmlFor="submitted_by">Staff Name *</label>
               <input
                 className={`form-input ${errors.submitted_by ? 'input-error' : ''}`}
