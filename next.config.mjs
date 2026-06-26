@@ -1,8 +1,5 @@
-import type { NextConfig } from 'next';
-
-const nextConfig: NextConfig = {
-  // Allow server components to fetch from Supabase
-  serverExternalPackages: [],
+/** @type {import('next').NextConfig} */
+const nextConfig = {
   // Security headers for production
   async headers() {
     return [
