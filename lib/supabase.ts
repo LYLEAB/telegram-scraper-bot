@@ -11,22 +11,33 @@ async function fetchTable(
   const order = orderBy ? `&order=${orderBy}` : '';
   const url = `${supabaseUrl}/rest/v1/${table}?select=${select}${order}`;
 
-  const res = await fetch(url, {
-    method: 'GET',
-    headers: {
-      apikey: serviceRoleKey,
-      Authorization: `Bearer ${serviceRoleKey}`,
-      'Content-Type': 'application/json',
-    },
-    cache: 'no-store',
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 4000); // 4-second timeout
 
-  if (!res.ok) {
-    const detail = await res.text().catch(() => 'unknown');
-    throw new Error(`[${table}] HTTP ${res.status}: ${detail}`);
+  try {
+    const res = await fetch(url, {
+      method: 'GET',
+      headers: {
+        apikey: serviceRoleKey,
+        Authorization: `Bearer ${serviceRoleKey}`,
+        'Content-Type': 'application/json',
+      },
+      cache: 'no-store',
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!res.ok) {
+      const detail = await res.text().catch(() => 'unknown');
+      throw new Error(`[${table}] HTTP ${res.status}: ${detail}`);
+    }
+
+    return res.json();
+  } catch (err) {
+    clearTimeout(timeoutId);
+    throw err;
   }
-
-  return res.json();
 }
 
 export async function fetchReferenceData(): Promise<ReferenceData> {
