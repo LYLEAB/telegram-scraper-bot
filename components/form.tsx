@@ -16,113 +16,78 @@ export default function Form({ referenceData }: FormProps) {
   const [submitting, setSubmitting] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [gpsLoading, setGpsLoading] = useState(false);
 
   const onFieldChange = (name: string, value: string) => {
     setFormState((prev) => {
       const updated = { ...prev, [name]: value };
-
-      // Reset nested cascading values
-      if (name === 'province_code') {
-        updated.district_code = '';
-        updated.dealer_code = '';
-      } else if (name === 'district_code') {
-        updated.dealer_code = '';
-      } else if (name === 'region_code') {
-        updated.dealer_code = '';
-      } else if (name === 'category_code') {
-        updated.brand_code = '';
-      }
-
+      // Cascade resets handled by LocationSelect itself, but also handle category→brand here
+      if (name === 'category_code') updated.brand_code = '';
       return updated;
     });
-
     if (errors[name]) {
-      setErrors((prev) => {
-        const copy = { ...prev };
-        delete copy[name];
-        return copy;
-      });
+      setErrors((prev) => { const c = { ...prev }; delete c[name]; return c; });
     }
   };
 
   const handleGetLocation = () => {
-    if (!navigator.geolocation) {
-      alert('Geolocation is not supported by your browser.');
-      return;
-    }
-    
+    if (!navigator.geolocation) { alert('Geolocation not supported.'); return; }
+    setGpsLoading(true);
     navigator.geolocation.getCurrentPosition(
-      (position) => {
-        onFieldChange('lat', position.coords.latitude.toString());
-        onFieldChange('lng', position.coords.longitude.toString());
+      (pos) => {
+        onFieldChange('lat', pos.coords.latitude.toFixed(6));
+        onFieldChange('lng', pos.coords.longitude.toFixed(6));
+        setGpsLoading(false);
       },
-      (error) => {
-        alert(`Unable to retrieve location: ${error.message}`);
-      },
-      { enableHighAccuracy: true, timeout: 10000 }
+      (err) => { alert(`Location error: ${err.message}`); setGpsLoading(false); },
+      { enableHighAccuracy: true, timeout: 12000 }
     );
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setServerError(null);
-
     const validationErrors = validateForm(formState);
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
-      
-      // Auto scroll to first error
-      const firstErrorField = Object.keys(validationErrors)[0];
-      const element = document.getElementById(firstErrorField);
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
+      const firstKey = Object.keys(validationErrors)[0];
+      document.getElementById(firstKey)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
-
     setSubmitting(true);
-
-    // Convert values and structure payload to match app/api/submit/route.ts expectation
     const payload = {
-      submitted_by: formState.submitted_by.trim(),
-      submission_date: formState.submission_date,
-      region_code: formState.region_code,
-      dealer_code: formState.dealer_code,
-      province_code: formState.province_code,
-      district_code: formState.district_code,
-      brand_code: formState.brand_code,
-      channel_code: formState.channel_code,
-      sub_channel_code: formState.sub_channel_code,
-      price_source_code: formState.price_source_code,
-      type_select_code: formState.type_select_code || null,
-      scheme: formState.scheme.trim() || null,
-      basic_price: formState.basic_price ? parseFloat(formState.basic_price) : null,
-      net_price: formState.net_price ? parseFloat(formState.net_price) : null,
-      sellout_price_seller: formState.sellout_price_seller ? parseFloat(formState.sellout_price_seller) : null,
+      submitted_by:           formState.submitted_by.trim(),
+      submission_date:        formState.submission_date,
+      region_code:            formState.region_code,
+      dealer_code:            formState.dealer_code,
+      province_code:          formState.province_code,
+      district_code:          formState.district_code,
+      brand_code:             formState.brand_code,
+      channel_code:           formState.channel_code,
+      sub_channel_code:       formState.sub_channel_code,
+      price_source_code:      formState.price_source_code,
+      type_select_code:       formState.type_select_code || null,
+      scheme:                 formState.scheme.trim() || null,
+      basic_price:            formState.basic_price ? parseFloat(formState.basic_price) : null,
+      net_price:              formState.net_price ? parseFloat(formState.net_price) : null,
+      sellout_price_seller:   formState.sellout_price_seller ? parseFloat(formState.sellout_price_seller) : null,
       sellout_price_consumer: formState.sellout_price_consumer ? parseFloat(formState.sellout_price_consumer) : null,
-      note: formState.note.trim() || null,
-      lat: formState.lat ? parseFloat(formState.lat) : null,
-      lng: formState.lng ? parseFloat(formState.lng) : null,
+      note:                   formState.note.trim() || null,
+      lat:                    formState.lat ? parseFloat(formState.lat) : null,
+      lng:                    formState.lng ? parseFloat(formState.lng) : null,
     };
-
     try {
-      const response = await fetch('/api/submit', {
+      const res = await fetch('/api/submit', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to submit tracking report.');
-      }
-
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Submit failed.');
       setSuccess(true);
-    } catch (error) {
-      setServerError(error instanceof Error ? error.message : 'An unexpected error occurred.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (err) {
+      setServerError(err instanceof Error ? err.message : 'Unexpected error.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
       setSubmitting(false);
@@ -136,47 +101,57 @@ export default function Form({ referenceData }: FormProps) {
     setSuccess(false);
   };
 
-  // Filter brands based on category selection client-side
   const filteredBrands = formState.category_code
     ? referenceData.brands.filter((b) => b.category_code === formState.category_code)
     : [];
 
+  // ── Success State ──────────────────────────────
+  if (success) {
+    return (
+      <div className="card">
+        <div className="success-card">
+          <span className="success-icon">🎉</span>
+          <h2>Report Submitted!</h2>
+          <p>
+            Pricing data saved to the database. A Telegram alert has been sent to the operations group.
+          </p>
+          <button className="btn-submit" onClick={handleReset} style={{ maxWidth: 280, margin: '0 auto' }}>
+            + Submit Another Report
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Form ───────────────────────────────────────
   return (
     <div className="card">
-      {success && (
-        <div className="success-overlay">
-          <div className="success-modal">
-            <div className="success-icon">✓</div>
-            <h2>Submission Success!</h2>
-            <p>Your pricing and promotion data has been stored. The Telegram alert is being sent.</p>
-            <button className="btn-done" onClick={handleReset}>
-              Submit Another Report
-            </button>
+
+      {serverError && (
+        <div className="form-section" style={{ paddingBottom: '0.5rem' }}>
+          <div className="alert alert-warning" role="alert">
+            ⚠️ <strong>Error:</strong> {serverError}
           </div>
         </div>
       )}
 
-      {serverError && (
-        <div className="alert alert-danger" role="alert">
-          <strong>Error:</strong> {serverError}
-        </div>
-      )}
+      <form onSubmit={handleSubmit} noValidate>
 
-      <form onSubmit={handleSubmit}>
-        {/* Section 1: Staff Details */}
+        {/* ── Section 1: Submitter ──────────────── */}
         <div className="form-section">
-          <h2 className="section-title">👤 Submitter Info</h2>
+          <div className="section-header">
+            <span className="section-icon">👤</span>
+            <h2 className="section-title">Submitter Info</h2>
+          </div>
           <div className="grid-2">
             <div className="form-group">
-              <label className="form-label" htmlFor="submitted_by">
-                Staff Name *
-              </label>
+              <label className="form-label" htmlFor="submitted_by">Staff Name *</label>
               <input
-                className="form-input"
+                className={`form-input ${errors.submitted_by ? 'input-error' : ''}`}
                 type="text"
                 id="submitted_by"
                 name="submitted_by"
-                placeholder="Enter your full name"
+                placeholder="Your full name"
                 value={formState.submitted_by}
                 onChange={(e) => onFieldChange('submitted_by', e.target.value)}
               />
@@ -184,27 +159,26 @@ export default function Form({ referenceData }: FormProps) {
             </div>
 
             <div className="form-group">
-              <label className="form-label" htmlFor="submission_date">
-                Report Date *
-              </label>
+              <label className="form-label" htmlFor="submission_date">Report Date *</label>
               <input
-                className="form-input"
+                className={`form-input ${errors.submission_date ? 'input-error' : ''}`}
                 type="date"
                 id="submission_date"
                 name="submission_date"
                 value={formState.submission_date}
                 onChange={(e) => onFieldChange('submission_date', e.target.value)}
               />
-              {errors.submission_date && (
-                <span className="error-message">{errors.submission_date}</span>
-              )}
+              {errors.submission_date && <span className="error-message">{errors.submission_date}</span>}
             </div>
           </div>
         </div>
 
-        {/* Section 2: Market Location */}
+        {/* ── Section 2: Location ───────────────── */}
         <div className="form-section">
-          <h2 className="section-title">📍 Location & Dealer</h2>
+          <div className="section-header">
+            <span className="section-icon">📍</span>
+            <h2 className="section-title">Location &amp; Dealer</h2>
+          </div>
           <LocationSelect
             formState={formState}
             onFieldChange={onFieldChange}
@@ -213,38 +187,39 @@ export default function Form({ referenceData }: FormProps) {
           />
         </div>
 
-        {/* Section 3: Product Info */}
+        {/* ── Section 3: Product & Channel ─────── */}
         <div className="form-section">
-          <h2 className="section-title">🛍️ Product & Channel</h2>
-          <div className="grid-2">
-            {/* Category Select */}
+          <div className="section-header">
+            <span className="section-icon">🛍️</span>
+            <h2 className="section-title">Product &amp; Channel</h2>
+          </div>
+
+          {/* Category → Brand */}
+          <div className="cascade-row">
             <div className="form-group">
-              <label className="form-label" htmlFor="category_code">
-                Category *
-              </label>
+              <label className="form-label" htmlFor="category_code">Category *</label>
               <select
-                className="form-input"
+                className={`form-input ${errors.category_code ? 'input-error' : ''}`}
                 id="category_code"
                 name="category_code"
                 value={formState.category_code}
                 onChange={(e) => onFieldChange('category_code', e.target.value)}
               >
-                <option value="">Select Category</option>
+                <option value="">🗂 Select Category</option>
                 {referenceData.categories.map((cat) => (
-                  <option key={cat.code} value={cat.code}>
-                    {cat.label}
-                  </option>
+                  <option key={cat.code} value={cat.code}>{cat.label}</option>
                 ))}
               </select>
+              {errors.category_code && <span className="error-message">{errors.category_code}</span>}
             </div>
 
-            {/* Brand Select */}
             <div className="form-group">
               <label className="form-label" htmlFor="brand_code">
                 Brand *
+                {!formState.category_code && <span className="cascade-hint"> — pick Category first</span>}
               </label>
               <select
-                className="form-input"
+                className={`form-input ${errors.brand_code ? 'input-error' : ''} ${!formState.category_code ? 'input-disabled' : ''}`}
                 id="brand_code"
                 name="brand_code"
                 value={formState.brand_code}
@@ -252,99 +227,80 @@ export default function Form({ referenceData }: FormProps) {
                 disabled={!formState.category_code}
               >
                 <option value="">
-                  {!formState.category_code ? 'Select Category First' : 'Select Brand'}
+                  {!formState.category_code
+                    ? '⬆ Select Category First'
+                    : `🏷 Select Brand (${filteredBrands.length})`}
                 </option>
-                {filteredBrands.map((brand) => (
-                  <option key={brand.code} value={brand.code}>
-                    {brand.label}
-                  </option>
+                {filteredBrands.map((b) => (
+                  <option key={b.code} value={b.code}>{b.label}</option>
                 ))}
               </select>
               {errors.brand_code && <span className="error-message">{errors.brand_code}</span>}
             </div>
           </div>
 
-          <div className="grid-2">
-            {/* Type/Select Code */}
+          {/* Packaging + Channel */}
+          <div className="cascade-row">
             <div className="form-group">
-              <label className="form-label" htmlFor="type_select_code">
-                Packaging/Type *
-              </label>
+              <label className="form-label" htmlFor="type_select_code">Packaging/Type *</label>
               <select
-                className="form-input"
+                className={`form-input ${errors.type_select_code ? 'input-error' : ''}`}
                 id="type_select_code"
                 name="type_select_code"
                 value={formState.type_select_code}
                 onChange={(e) => onFieldChange('type_select_code', e.target.value)}
               >
-                <option value="">Select Packaging</option>
-                {referenceData.type_selects.map((type) => (
-                  <option key={type.code} value={type.code}>
-                    {type.label}
-                  </option>
+                <option value="">📦 Select Packaging</option>
+                {referenceData.type_selects.map((t) => (
+                  <option key={t.code} value={t.code}>{t.label}</option>
                 ))}
               </select>
-              {errors.type_select_code && (
-                <span className="error-message">{errors.type_select_code}</span>
-              )}
+              {errors.type_select_code && <span className="error-message">{errors.type_select_code}</span>}
             </div>
 
-            {/* Empty grid spacer */}
-            <div className="form-group"></div>
-          </div>
-
-          <div className="grid-2">
-            {/* Channel Select */}
             <div className="form-group">
-              <label className="form-label" htmlFor="channel_code">
-                Channel *
-              </label>
+              <label className="form-label" htmlFor="channel_code">Channel *</label>
               <select
-                className="form-input"
+                className={`form-input ${errors.channel_code ? 'input-error' : ''}`}
                 id="channel_code"
                 name="channel_code"
                 value={formState.channel_code}
                 onChange={(e) => onFieldChange('channel_code', e.target.value)}
               >
-                <option value="">Select Channel</option>
-                {referenceData.channels.map((chan) => (
-                  <option key={chan.code} value={chan.code}>
-                    {chan.label}
-                  </option>
+                <option value="">🏪 Select Channel</option>
+                {referenceData.channels.map((c) => (
+                  <option key={c.code} value={c.code}>{c.label}</option>
                 ))}
               </select>
               {errors.channel_code && <span className="error-message">{errors.channel_code}</span>}
             </div>
+          </div>
 
-            {/* Sub Channel Select */}
-            <div className="form-group">
-              <label className="form-label" htmlFor="sub_channel_code">
-                Sub-Channel *
-              </label>
-              <select
-                className="form-input"
-                id="sub_channel_code"
-                name="sub_channel_code"
-                value={formState.sub_channel_code}
-                onChange={(e) => onFieldChange('sub_channel_code', e.target.value)}
-              >
-                <option value="">Select Sub-Channel</option>
-                {referenceData.sub_channels.map((subChan) => (
-                  <option key={subChan.code} value={subChan.code}>
-                    {subChan.label}
-                  </option>
-                ))}
-              </select>
-              {errors.sub_channel_code && (
-                <span className="error-message">{errors.sub_channel_code}</span>
-              )}
-            </div>
+          {/* Sub-Channel */}
+          <div className="form-group">
+            <label className="form-label" htmlFor="sub_channel_code">Sub-Channel *</label>
+            <select
+              className={`form-input ${errors.sub_channel_code ? 'input-error' : ''}`}
+              id="sub_channel_code"
+              name="sub_channel_code"
+              value={formState.sub_channel_code}
+              onChange={(e) => onFieldChange('sub_channel_code', e.target.value)}
+            >
+              <option value="">🏬 Select Sub-Channel</option>
+              {referenceData.sub_channels.map((s) => (
+                <option key={s.code} value={s.code}>{s.label}</option>
+              ))}
+            </select>
+            {errors.sub_channel_code && <span className="error-message">{errors.sub_channel_code}</span>}
           </div>
         </div>
 
-        {/* Section 4: Prices */}
+        {/* ── Section 4: Prices ────────────────── */}
         <div className="form-section">
-          <h2 className="section-title">💵 Price Details</h2>
+          <div className="section-header">
+            <span className="section-icon">💵</span>
+            <h2 className="section-title">Price Details</h2>
+          </div>
           <PriceFields
             formState={formState}
             onFieldChange={onFieldChange}
@@ -353,13 +309,14 @@ export default function Form({ referenceData }: FormProps) {
           />
         </div>
 
-        {/* Section 5: Scheme & Note */}
+        {/* ── Section 5: Scheme & Note ──────────── */}
         <div className="form-section">
-          <h2 className="section-title">📝 Promotion & Note</h2>
-          <div className="form-group">
-            <label className="form-label" htmlFor="scheme">
-              Promotion Scheme
-            </label>
+          <div className="section-header">
+            <span className="section-icon">📝</span>
+            <h2 className="section-title">Promotion &amp; Notes</h2>
+          </div>
+          <div className="form-group" style={{ marginBottom: '0.875rem' }}>
+            <label className="form-label" htmlFor="scheme">Promotion Scheme</label>
             <input
               className="form-input"
               type="text"
@@ -370,81 +327,85 @@ export default function Form({ referenceData }: FormProps) {
               onChange={(e) => onFieldChange('scheme', e.target.value)}
             />
           </div>
-
-          <div className="form-group last">
-            <label className="form-label" htmlFor="note">
-              Additional Remarks
-            </label>
+          <div className="form-group">
+            <label className="form-label" htmlFor="note">Additional Remarks</label>
             <textarea
               className="form-input"
               id="note"
               name="note"
-              placeholder="Any other observations..."
+              placeholder="Market observations, competitor activity..."
               rows={3}
-              style={{ resize: 'vertical' }}
+              style={{ resize: 'vertical', lineHeight: '1.5' }}
               value={formState.note}
               onChange={(e) => onFieldChange('note', e.target.value)}
             />
           </div>
         </div>
 
-        {/* Section 6: Geolocation details */}
+        {/* ── Section 6: GPS ────────────────────── */}
         <div className="form-section">
-          <h2 className="section-title">🌐 GPS Coordinates</h2>
-          <div className="grid-2">
+          <div className="section-header">
+            <span className="section-icon">🛰️</span>
+            <h2 className="section-title">GPS Location</h2>
+          </div>
+          <div className="gps-row">
             <div className="form-group">
-              <label className="form-label" htmlFor="lat">
-                Latitude
-              </label>
-              <div className="geo-input-container">
-                <input
-                  className="form-input"
-                  type="text"
-                  id="lat"
-                  name="lat"
-                  placeholder="e.g. 11.556"
-                  value={formState.lat}
-                  onChange={(e) => onFieldChange('lat', e.target.value)}
-                />
-                <button
-                  type="button"
-                  className="btn-geo"
-                  title="Find location"
-                  onClick={handleGetLocation}
-                >
-                  📍
-                </button>
-              </div>
+              <label className="form-label" htmlFor="lat">Latitude</label>
+              <input
+                className={`form-input ${errors.lat ? 'input-error' : ''}`}
+                type="text"
+                id="lat"
+                name="lat"
+                placeholder="11.5564"
+                value={formState.lat}
+                onChange={(e) => onFieldChange('lat', e.target.value)}
+              />
               {errors.lat && <span className="error-message">{errors.lat}</span>}
             </div>
 
             <div className="form-group">
-              <label className="form-label" htmlFor="lng">
-                Longitude
-              </label>
+              <label className="form-label" htmlFor="lng">Longitude</label>
               <input
-                className="form-input"
+                className={`form-input ${errors.lng ? 'input-error' : ''}`}
                 type="text"
                 id="lng"
                 name="lng"
-                placeholder="e.g. 104.928"
+                placeholder="104.9282"
                 value={formState.lng}
                 onChange={(e) => onFieldChange('lng', e.target.value)}
               />
               {errors.lng && <span className="error-message">{errors.lng}</span>}
             </div>
+
+            <div className="form-group">
+              <label className="form-label">&nbsp;</label>
+              <button
+                type="button"
+                className="btn-gps"
+                onClick={handleGetLocation}
+                disabled={gpsLoading}
+                title="Auto-detect GPS coordinates"
+              >
+                {gpsLoading ? <span className="spinner" /> : '📍'}
+                {gpsLoading ? 'Locating…' : 'Get GPS'}
+              </button>
+            </div>
           </div>
         </div>
 
-        <button className="btn-submit" type="submit" disabled={submitting}>
-          {submitting ? (
-            <>
-              <div className="spinner" /> Submitting Report...
-            </>
-          ) : (
-            'Submit Pricing Report'
-          )}
-        </button>
+        {/* ── Submit ────────────────────────────── */}
+        <div className="form-section" style={{ borderBottom: 'none' }}>
+          <button className="btn-submit" type="submit" disabled={submitting}>
+            {submitting ? (
+              <span className="status-badge">
+                <span className="spinner" /> Submitting Report…
+              </span>
+            ) : (
+              '🚀 Submit Pricing Report'
+            )}
+          </button>
+        </div>
+
       </form>
     </div>
   );
