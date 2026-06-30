@@ -141,16 +141,19 @@ export default function ExportModal({ isOpen, onClose, data }: ExportModalProps)
   const handleExportPDF = () => {
     const { headers, rows } = getExportData();
     
-    // Landscape orientation to fit many columns
-    const doc = new jsPDF({ orientation: 'landscape' });
+    // Landscape orientation to fit many columns, use A3 to avoid text wrapping issues
+    const doc = new jsPDF({ orientation: 'landscape', format: 'a3' });
     
     // Title
     doc.setFontSize(16);
-    doc.text('Market Price Update', 14, 22);
+    doc.setTextColor(0, 32, 96);
+    doc.setFont("helvetica", "bold");
+    doc.text('Weekly Market Price Update', 14, 22);
     
     // Subtitle
     doc.setFontSize(10);
     doc.setTextColor(100);
+    doc.setFont("helvetica", "normal");
     doc.text(`Exported ${data.length} records on ${new Date().toLocaleString()}`, 14, 30);
     
     // AutoTable
@@ -159,9 +162,17 @@ export default function ExportModal({ isOpen, onClose, data }: ExportModalProps)
       head: [headers],
       body: rows,
       theme: 'grid',
-      headStyles: { fillColor: [228, 30, 38], textColor: 255, fontSize: 8, fontStyle: 'bold' },
-      bodyStyles: { fontSize: 8, cellPadding: 2 },
-      styles: { overflow: 'linebreak' },
+      headStyles: { fillColor: [0, 32, 96], textColor: 255, fontSize: 9, fontStyle: 'bold', halign: 'center', valign: 'middle' },
+      bodyStyles: { fontSize: 8, cellPadding: 3, textColor: 0, halign: 'center', valign: 'middle' },
+      styles: { overflow: 'linebreak', lineWidth: 0.1, lineColor: [0, 32, 96] },
+      alternateRowStyles: { fillColor: [221, 235, 247] }, // Light blue
+      rowPageBreak: 'avoid',
+      didParseCell: function (data) {
+        // Apply peach color to even rows (0-indexed data.row.index)
+        if (data.section === 'body' && data.row.index % 2 === 0) {
+          data.cell.styles.fillColor = [252, 228, 214]; // Peach
+        }
+      },
       columnStyles: {
         0: { cellWidth: 15 } // No. column should be narrow
       }
