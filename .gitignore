@@ -1,32 +1,36 @@
-# Python
-creds.json
-*.session
-__pycache__/
-*.pyc
-firebase_creds.json
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# Environment / secrets
-.env
-.env.local
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+.yarn/install-state.gz
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# local env files
 .env*.local
 
-# Seeding data (generated files)
-seed.json
-seed_data.sql
+# vercel
+.vercel
 
-# Next.js build output
-.next/
-out/
-node_modules/
-
-# TypeScript build info
+# typescript
 *.tsbuildinfo
 next-env.d.ts
-
-# OS
-.DS_Store
-Thumbs.db
-
-# IDE
-.vscode/
-.idea/
