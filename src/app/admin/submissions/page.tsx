@@ -7,8 +7,9 @@ export const revalidate = 0;
 export default async function SubmissionsPage() {
   // Fetch data from the sorted view we created earlier
   const { data: submissions, error } = await supabaseAdmin
-    .from('sorted_submissions')
-    .select('*');
+    .from('submissions')
+    .select('*')
+    .order('created_at', { ascending: false });
 
   if (error) {
     console.error('Error fetching sorted submissions:', error);
@@ -50,6 +51,7 @@ export default async function SubmissionsPage() {
 
     return {
       ...sub,
+      phnom_penh_time: new Date(sub.created_at).toLocaleString('en-US', { timeZone: 'Asia/Phnom_Penh' }),
       category_label: categoryCode ? getLabel(categories, categoryCode) : '',
       brand_label: getLabel(brands, sub.brand_code),
       type_label: getLabel(types, sub.type_select_code),

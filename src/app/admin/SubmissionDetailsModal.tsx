@@ -1,6 +1,8 @@
 "use client";
 
-import { X, MapPin, User, Tag, DollarSign, Store, Info, Calendar } from 'lucide-react';
+import { useState } from 'react';
+import { X, MapPin, User, Tag, DollarSign, Store, Info, Calendar, ImageIcon } from 'lucide-react';
+import PhotoModal from './PhotoModal';
 
 interface SubmissionDetailsModalProps {
   isOpen: boolean;
@@ -9,11 +11,14 @@ interface SubmissionDetailsModalProps {
 }
 
 export default function SubmissionDetailsModal({ isOpen, onClose, submission }: SubmissionDetailsModalProps) {
+  const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
+  const [selectedPhotos, setSelectedPhotos] = useState<string[]>([]);
+
   if (!isOpen || !submission) return null;
 
   return (
     <div 
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-navy/60 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-[110] flex items-center justify-center bg-navy/60 backdrop-blur-sm p-4"
       onClick={onClose}
     >
       <div 
@@ -182,8 +187,46 @@ export default function SubmissionDetailsModal({ isOpen, onClose, submission }: 
             </section>
           )}
 
+          {/* Photos */}
+          {submission.photo_url && (
+            <section>
+              <h3 className="text-sm font-semibold text-[#A3AED0] uppercase tracking-wider mb-3 flex items-center gap-2">
+                <ImageIcon className="w-4 h-4" /> Photos
+              </h3>
+              <div className="flex flex-wrap justify-center gap-4">
+                {submission.photo_url.split(',').map((url: string, index: number) => (
+                  <button 
+                    key={index}
+                    onClick={() => {
+                      const allUrls = submission.photo_url.split(',');
+                      setSelectedPhotos([url, ...allUrls.filter((u: string) => u !== url)]);
+                      setIsPhotoModalOpen(true);
+                    }}
+                    className="block relative w-32 sm:w-40 md:w-48 aspect-[3/4] rounded-xl overflow-hidden border border-gray-100 dark:border-gray-800 hover:opacity-90 transition group bg-gray-50 dark:bg-gray-800/50 shadow-sm"
+                  >
+                    <img 
+                      src={url} 
+                      alt={`Submission photo ${index + 1}`}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                      <span className="opacity-0 group-hover:opacity-100 text-white font-medium text-sm drop-shadow-md bg-black/50 px-3 py-1.5 rounded-lg backdrop-blur-sm transition-opacity">View Full</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
+
         </div>
       </div>
+      
+      <PhotoModal 
+        isOpen={isPhotoModalOpen} 
+        onClose={() => setIsPhotoModalOpen(false)} 
+        photos={selectedPhotos} 
+      />
     </div>
   );
 }

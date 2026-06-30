@@ -6,7 +6,7 @@ export const revalidate = 0;
 
 export async function GET() {
   const { data: submissions, error } = await supabaseAdmin
-    .from('sorted_submissions')
+    .from('submissions')
     .select('*')
     .order('created_at', { ascending: false });
 
@@ -49,6 +49,7 @@ export async function GET() {
 
     return {
       ...sub,
+      phnom_penh_time: new Date(sub.created_at).toLocaleString('en-US', { timeZone: 'Asia/Phnom_Penh' }),
       category_label: categoryCode ? getLabel(categories, categoryCode) : '',
       brand_label: getLabel(brands, sub.brand_code),
       type_label: getLabel(types, sub.type_select_code),

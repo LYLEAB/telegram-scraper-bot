@@ -5,9 +5,10 @@ import {
   Users, Search, TrendingUp, TrendingDown, Camera, StickyNote,
   MapPin, Tag, Activity, BarChart3, ChevronDown, ChevronUp,
   ChevronsUpDown, X, Star, Award, Clock, CalendarDays,
-  FileSpreadsheet, Globe, LayoutGrid, List
+  FileSpreadsheet, Globe, LayoutGrid, List, Calendar, Download, CheckCircle2, ChevronRight, Trophy, Medal
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import SubmissionDetailsModal from './../SubmissionDetailsModal';
 
 type User = {
   name: string;
@@ -68,19 +69,20 @@ export default function UsersClient({
   const [sortDir, setSortDir] = useState<SortDir>('desc');
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
 
-  const today = new Date().toISOString().slice(0, 10);
-  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+  const todayStr = new Date().toLocaleString('en-US', { timeZone: 'Asia/Phnom_Penh' }).split(',')[0];
+  const yestStr = new Date(Date.now() - 86400000).toLocaleString('en-US', { timeZone: 'Asia/Phnom_Penh' }).split(',')[0];
 
   // KPI Stats
   const stats = useMemo(() => {
-    const activeToday = users.filter(u => u.lastSubmission?.startsWith(today)).length;
-    const activeYest = users.filter(u => u.lastSubmission?.startsWith(yesterday)).length;
+    const activeToday = users.filter(u => u.lastSubmission?.startsWith(todayStr)).length;
+    const activeYest = users.filter(u => u.lastSubmission?.startsWith(yestStr)).length;
     const topUser = users[0];
     const totalSubmissions = users.reduce((acc, u) => acc + u.totalSubmissions, 0);
     const avgPerUser = users.length > 0 ? (totalSubmissions / users.length).toFixed(1) : '0';
     return { total: users.length, activeToday, activeYest, topUser, totalSubmissions, avgPerUser };
-  }, [users, today, yesterday]);
+  }, [users, todayStr, yestStr]);
 
   // Filter + Sort
   const filtered = useMemo(() => {
@@ -129,7 +131,7 @@ export default function UsersClient({
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
     XLSX.utils.book_append_sheet(wb, ws, 'Users');
-    XLSX.writeFile(wb, `Users_Report_${today}.xlsx`);
+    XLSX.writeFile(wb, `Users_Report_${todayStr}.xlsx`);
   };
 
   // User detail modal: their submissions
@@ -143,12 +145,11 @@ export default function UsersClient({
   // Activity rank
   const getRank = (user: User) => {
     const idx = users.indexOf(user);
-    if (idx === 0) return { label: '🏆 Top Submitter', color: 'text-amber-500' };
-    if (idx === 1) return { label: '🥈 2nd Place', color: 'text-gray-400' };
-    if (idx === 2) return { label: '🥉 3rd Place', color: 'text-amber-700' };
+    if (idx === 0) return { label: 'Top Submitter', color: 'text-amber-500', icon: Trophy };
+    if (idx === 1) return { label: '2nd Place', color: 'text-gray-400', icon: Medal };
+    if (idx === 2) return { label: '3rd Place', color: 'text-amber-700', icon: Medal };
     const photoRatio = user.totalSubmissions > 0 ? user.photosCount / user.totalSubmissions : 0;
-    if (photoRatio > 0.8) return { label: '📸 Photo Pro', color: 'text-purple-500' };
-    if (user.provinces.length >= 3) return { label: '🌍 Wide Coverage', color: 'text-blue-500' };
+    if (photoRatio > 0.8) return { label: 'Photo Pro', color: 'text-purple-500', icon: Camera };
     return null;
   };
 
@@ -249,7 +250,7 @@ export default function UsersClient({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
           {filtered.map((user, idx) => {
             const rank = getRank(user);
-            const isActiveToday = user.lastSubmission?.startsWith(today);
+            const isActiveToday = user.lastSubmission?.startsWith(todayStr);
             const photoRatio = user.totalSubmissions > 0 ? Math.round(user.photosCount / user.totalSubmissions * 100) : 0;
 
             return (
@@ -266,7 +267,11 @@ export default function UsersClient({
                     </div>
                     <div>
                       <p className="text-sm font-extrabold text-navy dark:text-white leading-tight group-hover:text-[#E41E26] transition-colors">{user.name}</p>
-                      {rank && <p className={`text-xs font-bold ${rank.color} mt-0.5`}>{rank.label}</p>}
+                      {rank && (
+                        <p className={`text-xs font-bold mt-1 flex items-center gap-1 ${rank.color}`}>
+                          <rank.icon className="w-3.5 h-3.5" /> {rank.label}
+                        </p>
+                      )}
                     </div>
                   </div>
                   {isActiveToday && (
@@ -366,13 +371,16 @@ export default function UsersClient({
               <tbody>
                 {filtered.map((user, idx) => {
                   const rank = getRank(user);
-                  const isActiveToday = user.lastSubmission?.startsWith(today);
+                  const isActiveToday = user.lastSubmission?.startsWith(todayStr);
                   const photoRatio = user.totalSubmissions > 0 ? Math.round(user.photosCount / user.totalSubmissions * 100) : 0;
 
                   return (
                     <tr key={user.name} className={`hover:bg-gray-50/50 dark:hover:bg-[#0B1437]/50 transition-colors ${idx < filtered.length - 1 ? 'border-b border-gray-100 dark:border-gray-800' : ''}`}>
-                      <td className="py-3 px-4 text-xs font-bold text-gray-300">
-                        {idx === 0 ? '🏆' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `${idx + 1}`}
+                      <td className="py-3 px-4 text-xs font-bold text-gray-300 text-center">
+                        {idx === 0 ? <Trophy className="w-4 h-4 text-amber-500 inline" /> : 
+                         idx === 1 ? <Medal className="w-4 h-4 text-gray-400 inline" /> : 
+                         idx === 2 ? <Medal className="w-4 h-4 text-amber-700 inline" /> : 
+                         `${idx + 1}`}
                       </td>
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-3">
@@ -381,7 +389,11 @@ export default function UsersClient({
                           </div>
                           <div>
                             <p className="text-sm font-bold text-navy dark:text-white">{user.name}</p>
-                            {rank && <p className={`text-[10px] font-bold ${rank.color}`}>{rank.label}</p>}
+                            {rank && (
+                              <p className={`text-[10px] font-bold flex items-center gap-1 ${rank.color}`}>
+                                <rank.icon className="w-3 h-3" /> {rank.label}
+                              </p>
+                            )}
                           </div>
                           {isActiveToday && (
                             <span className="flex items-center gap-1 text-[10px] font-bold text-green-600 bg-green-50 dark:bg-green-900/20 px-2 py-0.5 rounded-full">
@@ -448,8 +460,11 @@ export default function UsersClient({
           <div className="w-full max-w-2xl rounded-2xl bg-white dark:bg-[#111C44] shadow-2xl border border-gray-100 dark:border-gray-800 overflow-hidden max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
 
             {/* Modal Header */}
-            <div className={`${getAvatarColor(selectedUser.name)} p-6 text-white`}>
-              <div className="flex items-start justify-between">
+            <div className={`relative p-8 overflow-hidden`}>
+              <div className={`absolute inset-0 opacity-90 ${getAvatarColor(selectedUser.name)}`}></div>
+              <div className="absolute inset-0 bg-gradient-to-tr from-black/40 via-transparent to-white/10"></div>
+              
+              <div className="relative flex items-start justify-between z-10 text-white">
                 <div className="flex items-center gap-4">
                   <div className="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center text-3xl font-extrabold">
                     {selectedUser.name.charAt(0).toUpperCase()}
@@ -457,7 +472,9 @@ export default function UsersClient({
                   <div>
                     <h2 className="text-2xl font-extrabold">{selectedUser.name}</h2>
                     {getRank(selectedUser) && (
-                      <p className="text-sm font-bold text-white/80 mt-0.5">{getRank(selectedUser)?.label}</p>
+                      <p className="text-sm font-bold text-white/80 mt-0.5 flex items-center gap-1.5">
+                        {(() => { const Icon = getRank(selectedUser)!.icon; return <Icon className="w-4 h-4" />; })()} {getRank(selectedUser)?.label}
+                      </p>
                     )}
                     <p className="text-xs text-white/70 mt-1 flex items-center gap-1">
                       <CalendarDays className="w-3.5 h-3.5" />
@@ -517,14 +534,21 @@ export default function UsersClient({
                   <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> Recent Submissions</p>
                   <div className="space-y-2">
                     {userSubmissions.map((sub, i) => (
-                      <div key={sub.id || i} className="flex items-center justify-between rounded-xl bg-[#F4F7FE] dark:bg-[#0B1437] px-4 py-3">
+                      <div 
+                        key={sub.id || i} 
+                        onClick={() => setSelectedSubmission(sub)}
+                        className="flex items-center justify-between rounded-xl bg-[#F4F7FE] dark:bg-[#0B1437] px-4 py-3 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition group"
+                      >
                         <div>
-                          <p className="text-sm font-bold text-navy dark:text-white">{sub.brand_label || sub.brand_code}</p>
-                          <p className="text-xs text-gray-400 mt-0.5">{sub.district_label || ''} · {sub.channel_label || ''}</p>
+                          <p className="text-sm font-bold text-navy dark:text-white group-hover:text-[#E41E26] transition-colors">{sub.brand_label || sub.brand_code}</p>
+                          <p className="text-xs text-gray-400 mt-0.5">{sub.district_label || ''} {sub.district_label && sub.channel_label ? '·' : ''} {sub.channel_label || ''}</p>
                         </div>
-                        <div className="text-right">
-                          <p className="text-sm font-bold text-[#E41E26]">${sub.net_price || '—'}</p>
-                          <p className="text-xs text-gray-400">{timeAgo(sub.phnom_penh_time || sub.created_at)}</p>
+                        <div className="text-right flex items-center gap-2">
+                          <div>
+                            <p className="text-sm font-bold text-[#E41E26]">${sub.net_price || '—'}</p>
+                            <p className="text-xs text-gray-400">{timeAgo(sub.phnom_penh_time || sub.created_at)}</p>
+                          </div>
+                          <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-[#E41E26] transition-colors ml-2" />
                         </div>
                       </div>
                     ))}
@@ -535,6 +559,13 @@ export default function UsersClient({
           </div>
         </div>
       )}
+
+      {/* Submission Details Modal */}
+      <SubmissionDetailsModal 
+        isOpen={!!selectedSubmission} 
+        onClose={() => setSelectedSubmission(null)} 
+        submission={selectedSubmission} 
+      />
     </div>
   );
 }

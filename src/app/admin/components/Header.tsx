@@ -6,6 +6,7 @@ import { useTheme } from 'next-themes';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
+import SubmissionDetailsModal from '../SubmissionDetailsModal';
 
 interface HeaderProps {
   sidebarOpen: boolean;
@@ -18,6 +19,7 @@ export default function Header({ sidebarOpen, setSidebarOpen }: HeaderProps) {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
+  const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
   
   const [user, setUser] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -103,14 +105,29 @@ export default function Header({ sidebarOpen, setSidebarOpen }: HeaderProps) {
   }, []);
 
   const handleNotificationClick = async (notif: any) => {
-    // Optimistic update
+    // 1. Optimistically mark as read
     setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, unread: false } : n));
-    // Persist to DB
-    await fetch('/api/notifications', {
+    
+    // 2. Persist to DB in the background
+    fetch('/api/notifications', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id: notif.id }),
-    });
+    }).catch(e => console.error(e));
+
+    // 3. Fetch the full submission details to open in the modal
+    try {
+      const res = await fetch(`/api/submissions/${notif.id}`);
+      if (res.ok) {
+        const fullSubmission = await res.json();
+        setSelectedSubmission(fullSubmission);
+        setShowNotifications(false); // Close the dropdown automatically
+      } else {
+        console.error('Failed to fetch full submission');
+      }
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const unreadCount = notifications.filter(n => n.unread).length;
@@ -239,10 +256,6 @@ export default function Header({ sidebarOpen, setSidebarOpen }: HeaderProps) {
                           : 'hover:bg-[#F4F7FE] dark:hover:bg-[#0B1437]'
                       }`}
                     >
-                      {/* Avatar */}
-                      <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#E41E26] to-[#ff6b6b] flex items-center justify-center text-white text-sm font-extrabold shrink-0">
-                        {notif.submitter?.charAt(0)?.toUpperCase() || '?'}
-                      </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-2">
                           <p className="text-sm font-bold text-navy dark:text-white truncate">{notif.title}</p>
@@ -366,6 +379,15 @@ export default function Header({ sidebarOpen, setSidebarOpen }: HeaderProps) {
             </button>
           </div>
         </div>
+      )}
+
+      {/* Submission Details Modal */}
+      {selectedSubmission && (
+        <SubmissionDetailsModal
+          isOpen={true}
+          onClose={() => setSelectedSubmission(null)}
+          submission={selectedSubmission}
+        />
       )}
       {/* End Modals */}
     </>

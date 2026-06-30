@@ -21,6 +21,36 @@ const AdminMap = dynamic(() => import('./AdminMap'), {
   loading: () => <div className="bg-gray-100 animate-pulse w-full h-[600px] rounded-xl flex items-center justify-center text-gray-500">Loading Map...</div>
 });
 
+// Helper to parse Scheme into Scheme and FOC
+// e.g. "50+1" -> Scheme: 50, FOC: 1
+// "Buy 10 free 2" -> Scheme: 10, FOC: 2
+const parseScheme = (schemeString: string) => {
+  if (!schemeString) return { scheme: '', foc: '' };
+  
+  // Very basic parsing for common "+"" notation
+  const plusMatch = schemeString.match(/^(\d+)\s*\+\s*(\d+)$/);
+  if (plusMatch) {
+    return { scheme: plusMatch[1], foc: plusMatch[2] };
+  }
+
+  return { scheme: schemeString, foc: '' };
+};
+
+const formatPriceSource = (label: string | undefined | null) => {
+  if (!label) return 'NCP';
+  const lower = label.toLowerCase();
+  if (lower === 'company') return 'NCP';
+  if (lower === 'wholesale') return 'ORD';
+  return label;
+};
+
+const getPhnomPenhDateStr = (dateVal: string | Date | undefined) => {
+  if (!dateVal) return '';
+  const d = new Date(dateVal);
+  if (isNaN(d.getTime())) return '';
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Phnom_Penh' }).format(d);
+};
+
 export default function AdminDashboard({ 
   initialSubmissions, 
   brands, 
@@ -103,7 +133,10 @@ export default function AdminDashboard({
 
   const [brandFilter, setBrandFilter] = useState('');
   const [provinceFilter, setProvinceFilter] = useState('');
+  const [channelFilter, setChannelFilter] = useState('');
+  const [schemeFilter, setSchemeFilter] = useState('');
   const [dateFilter, setDateFilter] = useState('');
+  const [priceSourceFilter, setPriceSourceFilter] = useState('');
   const [viewMode, setViewMode] = useState<'table' | 'map'>('table');
 
   // Photo Modal & Details Modal
@@ -132,20 +165,30 @@ export default function AdminDashboard({
         sub.dealer_label?.toLowerCase().includes(searchLower)
       );
 
-      const matchBrand = brandFilter ? sub.brand_code === brandFilter : true;
-      const matchProvince = provinceFilter ? sub.province_code === provinceFilter : true;
+      const matchBrand = brandFilter ? (sub.brand_code === brandFilter || sub.brand_label === brandFilter) : true;
+      const matchProvince = provinceFilter ? (sub.province_code === provinceFilter || sub.province_label === provinceFilter) : true;
+      const matchChannel = channelFilter ? sub.channel_label === channelFilter : true;
+      
+      const parsedScheme = parseScheme(sub.scheme);
+      const schemeText = parsedScheme.scheme?.trim();
+      const shortBrand = sub.brand_label ? sub.brand_label.split(' ')[0] : 'Unknown';
+      const fullSchemeName = schemeText ? `${schemeText} (${shortBrand})` : '';
+      const matchScheme = schemeFilter ? fullSchemeName === schemeFilter : true;
+      
+      const formattedSource = formatPriceSource(sub.price_source_label);
+      const matchPriceSource = priceSourceFilter ? formattedSource === priceSourceFilter : true;
       
       const dateString = String(sub.phnom_penh_time || sub.submission_date || sub.created_at);
       const matchDate = dateFilter ? dateString.startsWith(dateFilter) : true;
 
-      return matchSearch && matchBrand && matchProvince && matchDate;
+      return matchSearch && matchBrand && matchProvince && matchDate && matchChannel && matchScheme && matchPriceSource;
     });
-  }, [submissions, search, brandFilter, provinceFilter, dateFilter]);
+  }, [submissions, search, brandFilter, provinceFilter, dateFilter, channelFilter, schemeFilter, priceSourceFilter]);
 
   // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, brandFilter, provinceFilter, dateFilter]);
+  }, [search, brandFilter, provinceFilter, dateFilter, channelFilter, schemeFilter, priceSourceFilter]);
 
   // Calculate paginated data
   const totalPages = Math.ceil(filteredSubmissions.length / itemsPerPage);
@@ -156,13 +199,14 @@ export default function AdminDashboard({
 
   // Metrics
   const metrics = useMemo(() => {
-    const todayStr = new Date().toISOString().split('T')[0];
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toISOString().split('T')[0];
+    const now = new Date();
+    const todayStr = getPhnomPenhDateStr(now);
+    
+    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const yesterdayStr = getPhnomPenhDateStr(yesterday);
 
-    const todayCount = submissions.filter(s => String(s.submission_date).startsWith(todayStr)).length;
-    const yesterdayCount = submissions.filter(s => String(s.submission_date).startsWith(yesterdayStr)).length;
+    const todayCount = submissions.filter(s => getPhnomPenhDateStr(s.phnom_penh_time || s.created_at) === todayStr).length;
+    const yesterdayCount = submissions.filter(s => getPhnomPenhDateStr(s.phnom_penh_time || s.created_at) === yesterdayStr).length;
     
     let todayTrend = 0;
     if (yesterdayCount === 0) {
@@ -183,7 +227,7 @@ export default function AdminDashboard({
       if (s.province_label) activeProvinces.add(s.province_label);
     });
 
-    const activeSubmittersToday = new Set(submissions.filter(s => String(s.submission_date).startsWith(todayStr)).map(s => s.submitted_by)).size;
+    const activeSubmittersToday = new Set(submissions.filter(s => getPhnomPenhDateStr(s.phnom_penh_time || s.created_at) === todayStr).map(s => s.submitted_by)).size;
 
     const sortedBrands = Object.entries(brandCounts).sort((a, b) => b[1] - a[1]);
     const topBrand = sortedBrands[0]?.[0] || 'N/A';
@@ -251,7 +295,7 @@ export default function AdminDashboard({
     last7Days.forEach(date => counts[date] = 0);
 
     filteredSubmissions.forEach(s => {
-      const dateStr = s.submission_date ? String(s.submission_date).split('T')[0] : '';
+      const dateStr = getPhnomPenhDateStr(s.phnom_penh_time || s.created_at);
       if (counts[dateStr] !== undefined) {
         counts[dateStr]++;
       }
@@ -259,8 +303,27 @@ export default function AdminDashboard({
 
     return last7Days.map(date => ({
       date: date.substring(5), // e.g. "06-29"
+      fullDate: date,
       submissions: counts[date]
     }));
+  }, [filteredSubmissions]);
+
+  // Chart Data: Top Schemes
+  const schemeChartData = useMemo(() => {
+    const counts: Record<string, number> = {};
+    filteredSubmissions.forEach(s => {
+      const parsedScheme = parseScheme(s.scheme);
+      const schemeText = parsedScheme.scheme?.trim();
+      const shortBrand = s.brand_label ? s.brand_label.split(' ')[0] : 'Unknown';
+      if (schemeText) {
+        const key = `${schemeText} (${shortBrand})`;
+        counts[key] = (counts[key] || 0) + 1;
+      }
+    });
+    return Object.entries(counts)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
   }, [filteredSubmissions]);
 
   // Chart Data: Submissions by Channel
@@ -274,8 +337,68 @@ export default function AdminDashboard({
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value);
   }, [filteredSubmissions]);
+
+  // Chart Data: Weekly Price Source Trend (Last 7 Days)
+  const weeklyPriceSourceData = useMemo(() => {
+    const last7Days = Array.from({length: 7}, (_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - (6 - i));
+      return d.toISOString().split('T')[0];
+    });
+    
+    const counts: Record<string, { ncp: number, ord: number }> = {};
+    last7Days.forEach(date => counts[date] = { ncp: 0, ord: 0 });
+
+    filteredSubmissions.forEach(s => {
+      const dateStr = s.submission_date ? String(s.submission_date).split('T')[0] : '';
+      if (counts[dateStr] !== undefined) {
+        const source = formatPriceSource(s.price_source_label);
+        if (source === 'NCP') counts[dateStr].ncp++;
+        else if (source === 'ORD') counts[dateStr].ord++;
+      }
+    });
+
+    return last7Days.map(date => ({
+      date: date.substring(5), // e.g. "06-29"
+      fullDate: date,
+      ncp: counts[date].ncp,
+      ord: counts[date].ord
+    }));
+  }, [filteredSubmissions]);
   
   const PIE_COLORS = ['#E41E26', '#00B5D8', '#FFB547', '#4318FF', '#05CD99'];
+
+  const stableChannels = useMemo(() => {
+    const counts: Record<string, number> = {};
+    submissions.forEach(s => {
+      const channel = s.channel_label || 'Unknown';
+      counts[channel] = (counts[channel] || 0) + 1;
+    });
+    return Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])
+      .map(entry => entry[0]);
+  }, [submissions]);
+
+  const stablePriceSources = useMemo(() => {
+    const counts: Record<string, number> = {};
+    submissions.forEach(s => {
+      const source = formatPriceSource(s.price_source_label);
+      counts[source] = (counts[source] || 0) + 1;
+    });
+    return Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])
+      .map(entry => entry[0]);
+  }, [submissions]);
+
+  const getChannelColor = (channel: string) => {
+    const idx = stableChannels.indexOf(channel);
+    return PIE_COLORS[Math.max(0, idx) % PIE_COLORS.length];
+  };
+
+  const getPriceSourceColor = (source: string) => {
+    const idx = stablePriceSources.indexOf(source);
+    return PIE_COLORS[(Math.max(0, idx) + 2) % PIE_COLORS.length]; // Offset by 2 for different shades
+  };
 
   const confirmDelete = async (id: string) => {
     setIsDeleting(id);
@@ -306,21 +429,6 @@ export default function AdminDashboard({
     } finally {
       setIsDeleting(null);
     }
-  };
-
-  // Helper to parse Scheme into Scheme and FOC
-  // e.g. "50+1" -> Scheme: 50, FOC: 1
-  // "Buy 10 free 2" -> Scheme: 10, FOC: 2
-  const parseScheme = (schemeString: string) => {
-    if (!schemeString) return { scheme: '', foc: '' };
-    
-    // Very basic parsing for common "+"" notation
-    const plusMatch = schemeString.match(/^(\d+)\s*\+\s*(\d+)$/);
-    if (plusMatch) {
-      return { scheme: plusMatch[1], foc: plusMatch[2] };
-    }
-
-    return { scheme: schemeString, foc: '' };
   };
 
   const handleExportExcel = () => {
@@ -387,24 +495,19 @@ export default function AdminDashboard({
 
   return (
     <div className="space-y-6">
-      {/* Title */}
-      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="text-3xl font-bold text-navy dark:text-white">
-          Overview
-        </h2>
-      </div>
+
 
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 md:gap-6 2xl:gap-7.5">
         
         {/* Card 1: Total Submissions (Blue) */}
-        <div className="rounded-[16px] bg-white dark:bg-[#111C44] shadow-horizon border-l-[4px] border-blue-600 p-5 relative overflow-hidden">
-          <div className="flex justify-between items-start mb-4">
+        <div className="rounded-[16px] bg-white dark:bg-[#111C44] shadow-horizon border-l-[4px] border-blue-600 p-4 relative overflow-hidden">
+          <div className="flex justify-between items-start mb-3">
             <p className="text-[11px] font-bold text-gray-400 dark:text-gray-500 tracking-wider uppercase">Total Submissions</p>
             <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center">
               <Activity className="w-4 h-4 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
-          <h4 className="text-3xl font-extrabold text-navy dark:text-white mb-2">
+          <h4 className="text-3xl font-extrabold text-navy dark:text-white mb-1">
             {metrics.total.toLocaleString()}
           </h4>
           <div className="flex items-center text-xs font-medium">
@@ -413,14 +516,14 @@ export default function AdminDashboard({
         </div>
 
         {/* Card 2: Submitted Today (Green) */}
-        <div className="rounded-[16px] bg-white dark:bg-[#111C44] shadow-horizon border-l-[4px] border-teal-500 p-5 relative overflow-hidden">
-          <div className="flex justify-between items-start mb-4">
+        <div className="rounded-[16px] bg-white dark:bg-[#111C44] shadow-horizon border-l-[4px] border-teal-500 p-4 relative overflow-hidden">
+          <div className="flex justify-between items-start mb-3">
             <p className="text-[11px] font-bold text-gray-400 dark:text-gray-500 tracking-wider uppercase">Submitted Today</p>
             <div className="w-8 h-8 rounded-lg bg-teal-50 dark:bg-teal-900/30 flex items-center justify-center">
               <Package className="w-4 h-4 text-teal-600 dark:text-teal-400" />
             </div>
           </div>
-          <h4 className="text-3xl font-extrabold text-navy dark:text-white mb-2">
+          <h4 className="text-3xl font-extrabold text-navy dark:text-white mb-1">
             {metrics.today.toLocaleString()}
           </h4>
           <div className="flex items-center text-xs font-medium">
@@ -432,14 +535,14 @@ export default function AdminDashboard({
         </div>
 
         {/* Card 3: Total Submitters (Orange) */}
-        <div className="rounded-[16px] bg-white dark:bg-[#111C44] shadow-horizon border-l-[4px] border-orange-500 p-5 relative overflow-hidden">
-          <div className="flex justify-between items-start mb-4">
+        <div className="rounded-[16px] bg-white dark:bg-[#111C44] shadow-horizon border-l-[4px] border-orange-500 p-4 relative overflow-hidden">
+          <div className="flex justify-between items-start mb-3">
             <p className="text-[11px] font-bold text-gray-400 dark:text-gray-500 tracking-wider uppercase">Total Submitters</p>
             <div className="w-8 h-8 rounded-lg bg-orange-50 dark:bg-orange-900/30 flex items-center justify-center">
               <Users className="w-4 h-4 text-orange-600 dark:text-orange-400" />
             </div>
           </div>
-          <h4 className="text-3xl font-extrabold text-navy dark:text-white mb-2">
+          <h4 className="text-3xl font-extrabold text-navy dark:text-white mb-1">
             {metrics.totalSubmitters.toLocaleString()}
           </h4>
           <div className="flex items-center text-xs font-medium">
@@ -449,14 +552,14 @@ export default function AdminDashboard({
         </div>
 
         {/* Card 4: Top Tracked Brand (Red) */}
-        <div className="rounded-[16px] bg-white dark:bg-[#111C44] shadow-horizon border-l-[4px] border-[#E41E26] p-5 relative overflow-hidden">
-          <div className="flex justify-between items-start mb-4">
+        <div className="rounded-[16px] bg-white dark:bg-[#111C44] shadow-horizon border-l-[4px] border-[#E41E26] p-4 relative overflow-hidden">
+          <div className="flex justify-between items-start mb-3">
             <p className="text-[11px] font-bold text-gray-400 dark:text-gray-500 tracking-wider uppercase">Top Brand</p>
             <div className="w-8 h-8 rounded-lg bg-red-50 dark:bg-red-900/30 flex items-center justify-center">
               <Tag className="w-4 h-4 text-[#E41E26]" />
             </div>
           </div>
-          <h4 className="text-2xl font-extrabold text-navy dark:text-white mb-2 truncate" title={metrics.topBrand}>
+          <h4 className="text-2xl font-extrabold text-navy dark:text-white mb-1 line-clamp-2" title={metrics.topBrand}>
             {metrics.topBrand}
           </h4>
           <div className="flex items-center text-xs font-medium">
@@ -467,7 +570,7 @@ export default function AdminDashboard({
       </div>
 
       {/* Top Charts Row (Line & Pie) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 md:gap-6 2xl:gap-7.5 mb-5 md:mb-6 2xl:mb-7.5">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-5 md:gap-6 2xl:gap-7.5 mb-5 md:mb-6 2xl:mb-7.5">
         
         {/* Weekly Submissions Line Chart (Takes 2 columns) */}
         <div className="rounded-[20px] bg-white dark:bg-[#111C44] p-6 shadow-horizon lg:col-span-2">
@@ -479,13 +582,25 @@ export default function AdminDashboard({
           </div>
           <div className="h-[250px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={weeklyChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <LineChart 
+                data={weeklyChartData} 
+                margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                onClick={(e: any) => {
+                  if (e && e.activePayload && e.activePayload.length > 0) {
+                    const selectedDate = e.activePayload[0].payload.fullDate;
+                    setDateFilter(prev => prev === selectedDate ? '' : selectedDate);
+                  }
+                }}
+                className="cursor-pointer"
+              >
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
                 <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#A3AED0' }} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#A3AED0' }} />
                 <Tooltip 
                   cursor={{ stroke: '#A3AED0', strokeWidth: 1, strokeDasharray: '3 3' }}
-                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0px 18px 40px rgba(112,144,176,0.12)' }}
+                  contentStyle={{ backgroundColor: '#fff', borderRadius: '12px', border: 'none', boxShadow: '0px 18px 40px rgba(112,144,176,0.12)' }}
+                  itemStyle={{ color: '#2B3674', fontWeight: 600 }}
+                  labelStyle={{ color: '#A3AED0', fontWeight: 500 }}
                 />
                 <Line 
                   type="monotone" 
@@ -504,6 +619,14 @@ export default function AdminDashboard({
         <div className="rounded-[20px] bg-white dark:bg-[#111C44] p-6 shadow-horizon">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-bold text-navy dark:text-white">By Channel</h3>
+            {channelFilter && (
+              <button 
+                onClick={() => setChannelFilter('')}
+                className="text-xs font-bold text-[#E41E26] hover:underline"
+              >
+                Clear Filter
+              </button>
+            )}
           </div>
           <div className="h-[250px] w-full flex items-center justify-center">
             <ResponsiveContainer width="100%" height="100%">
@@ -517,13 +640,53 @@ export default function AdminDashboard({
                   paddingAngle={5}
                   dataKey="value"
                   stroke="none"
+                  onClick={(data) => { if (data && data.name) setChannelFilter(prev => prev === data.name ? '' : data.name); }}
+                  className="cursor-pointer outline-none"
                 >
                   {channelPieData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                    <Cell 
+                      key={`cell-${index}`} 
+                      fill={getChannelColor(entry.name)} 
+                      className="hover:opacity-80 transition-opacity"
+                    />
                   ))}
                 </Pie>
                 <Tooltip 
-                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0px 18px 40px rgba(112,144,176,0.12)' }}
+                  contentStyle={{ backgroundColor: '#fff', borderRadius: '12px', border: 'none', boxShadow: '0px 18px 40px rgba(112,144,176,0.12)' }}
+                  itemStyle={{ color: '#2B3674', fontWeight: 600 }}
+                  labelStyle={{ color: '#A3AED0', fontWeight: 500 }}
+                />
+                <Legend 
+                  verticalAlign="bottom" 
+                  height={36} 
+                  iconType="circle"
+                  wrapperStyle={{ fontSize: '12px', fontWeight: '500', color: '#2B3674', cursor: 'pointer' }}
+                  onClick={(e: any) => { if (e && e.value) setChannelFilter(prev => prev === e.value ? '' : e.value); }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Submissions by Price Source Line Chart (Takes 1 column) */}
+        <div className="rounded-[20px] bg-white dark:bg-[#111C44] p-6 shadow-horizon">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-navy dark:text-white">NCP/ORD Trend</h3>
+          </div>
+          <div className="h-[250px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart 
+                data={weeklyPriceSourceData} 
+                margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#A3AED0' }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#A3AED0' }} />
+                <Tooltip 
+                  cursor={{ stroke: '#A3AED0', strokeWidth: 1, strokeDasharray: '3 3' }}
+                  contentStyle={{ backgroundColor: '#fff', borderRadius: '12px', border: 'none', boxShadow: '0px 18px 40px rgba(112,144,176,0.12)' }}
+                  itemStyle={{ color: '#2B3674', fontWeight: 600 }}
+                  labelStyle={{ color: '#A3AED0', fontWeight: 500 }}
                 />
                 <Legend 
                   verticalAlign="bottom" 
@@ -531,18 +694,44 @@ export default function AdminDashboard({
                   iconType="circle"
                   wrapperStyle={{ fontSize: '12px', fontWeight: '500', color: '#2B3674' }}
                 />
-              </PieChart>
+                <Line 
+                  type="monotone" 
+                  dataKey="ncp" 
+                  name="NCP"
+                  stroke={getPriceSourceColor('NCP')} 
+                  strokeWidth={3}
+                  dot={{ r: 3, fill: getPriceSourceColor('NCP'), strokeWidth: 2, stroke: '#fff' }}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="ord" 
+                  name="ORD"
+                  stroke={getPriceSourceColor('ORD')} 
+                  strokeWidth={3}
+                  dot={{ r: 3, fill: getPriceSourceColor('ORD'), strokeWidth: 2, stroke: '#fff' }}
+                />
+              </LineChart>
             </ResponsiveContainer>
           </div>
         </div>
       </div>
 
       {/* Bar Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 md:gap-6 2xl:gap-7.5">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 md:gap-6 2xl:gap-7.5">
         
         {/* Chart 1: Submissions by Province */}
         <div className="rounded-[20px] bg-white dark:bg-[#111C44] p-6 shadow-horizon">
-          <h3 className="text-lg font-bold text-navy dark:text-white mb-4">Top Provinces by Activity</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-navy dark:text-white">Top Provinces by Activity</h3>
+            {provinceFilter && (
+              <button 
+                onClick={() => setProvinceFilter('')}
+                className="text-xs font-bold text-[#E41E26] hover:underline"
+              >
+                Clear Filter
+              </button>
+            )}
+          </div>
           <div className="h-[250px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={provinceChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
@@ -550,10 +739,19 @@ export default function AdminDashboard({
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#A3AED0' }} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#A3AED0' }} />
                 <Tooltip 
-                  cursor={{ fill: '#F4F7FE' }}
-                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0px 18px 40px rgba(112,144,176,0.12)' }}
+                  cursor={{ fill: 'rgba(244, 247, 254, 0.4)' }}
+                  contentStyle={{ backgroundColor: '#fff', borderRadius: '12px', border: 'none', boxShadow: '0px 18px 40px rgba(112,144,176,0.12)' }}
+                  itemStyle={{ color: '#2B3674', fontWeight: 600 }}
+                  labelStyle={{ color: '#A3AED0', fontWeight: 500 }}
                 />
-                <Bar dataKey="count" fill="#4318FF" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                <Bar 
+                  dataKey="count" 
+                  fill="#4318FF" 
+                  radius={[4, 4, 0, 0]} 
+                  maxBarSize={40} 
+                  onClick={(data) => { if (data && data.name) setProvinceFilter(prev => prev === data.name ? '' : data.name); }}
+                  className="cursor-pointer hover:opacity-80 transition-opacity"
+                />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -561,7 +759,17 @@ export default function AdminDashboard({
 
         {/* Chart 2: Average Net Price by Brand */}
         <div className="rounded-[20px] bg-white dark:bg-[#111C44] p-6 shadow-horizon">
-          <h3 className="text-lg font-bold text-navy dark:text-white mb-4">Avg Net Price by Brand ($)</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-navy dark:text-white">Avg Net Price by Brand ($)</h3>
+            {brandFilter && (
+              <button 
+                onClick={() => setBrandFilter('')}
+                className="text-xs font-bold text-[#E41E26] hover:underline"
+              >
+                Clear Filter
+              </button>
+            )}
+          </div>
           <div className="h-[250px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={brandPriceData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
@@ -569,11 +777,58 @@ export default function AdminDashboard({
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#A3AED0' }} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#A3AED0' }} />
                 <Tooltip 
-                  cursor={{ fill: '#F4F7FE' }}
-                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0px 18px 40px rgba(112,144,176,0.12)' }}
+                  cursor={{ fill: 'rgba(244, 247, 254, 0.4)' }}
+                  contentStyle={{ backgroundColor: '#fff', borderRadius: '12px', border: 'none', boxShadow: '0px 18px 40px rgba(112,144,176,0.12)' }}
+                  itemStyle={{ color: '#2B3674', fontWeight: 600 }}
+                  labelStyle={{ color: '#A3AED0', fontWeight: 500 }}
                   formatter={(value) => [`$${value}`, 'Avg Price']}
                 />
-                <Bar dataKey="avgPrice" fill="#00B5D8" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                <Bar 
+                  dataKey="avgPrice" 
+                  fill="#00B5D8" 
+                  radius={[4, 4, 0, 0]} 
+                  maxBarSize={40} 
+                  onClick={(data) => { if (data && data.name) setBrandFilter(prev => prev === data.name ? '' : data.name); }}
+                  className="cursor-pointer hover:opacity-80 transition-opacity"
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Chart 3: Top Schemes */}
+        <div className="rounded-[20px] bg-white dark:bg-[#111C44] p-6 shadow-horizon">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-navy dark:text-white">Top Schemes</h3>
+            {schemeFilter && (
+              <button 
+                onClick={() => setSchemeFilter('')}
+                className="text-xs font-bold text-[#E41E26] hover:underline"
+              >
+                Clear Filter
+              </button>
+            )}
+          </div>
+          <div className="h-[250px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={schemeChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#A3AED0' }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#A3AED0' }} />
+                <Tooltip 
+                  cursor={{ fill: 'rgba(244, 247, 254, 0.4)' }}
+                  contentStyle={{ backgroundColor: '#fff', borderRadius: '12px', border: 'none', boxShadow: '0px 18px 40px rgba(112,144,176,0.12)' }}
+                  itemStyle={{ color: '#2B3674', fontWeight: 600 }}
+                  labelStyle={{ color: '#A3AED0', fontWeight: 500 }}
+                />
+                <Bar 
+                  dataKey="count" 
+                  fill="#FFB547" 
+                  radius={[4, 4, 0, 0]} 
+                  maxBarSize={40} 
+                  onClick={(data) => { if (data && data.name) setSchemeFilter(prev => prev === data.name ? '' : data.name); }}
+                  className="cursor-pointer hover:opacity-80 transition-opacity"
+                />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -593,38 +848,35 @@ export default function AdminDashboard({
         </div>
         <div className="divide-y divide-gray-100 dark:divide-gray-800">
           {submissions.slice(0, 5).map((sub) => {
-            const dateObj = sub.phnom_penh_time ? new Date(sub.phnom_penh_time) : new Date(sub.created_at);
-            const timeStr = dateObj.toLocaleString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'UTC' });
-            const dateStr = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+            const dateObj = new Date(sub.created_at);
+            const timeStr = dateObj.toLocaleString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'Asia/Phnom_Penh' });
+            const dateStr = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'Asia/Phnom_Penh' });
             const photoCount = sub.photo_url ? sub.photo_url.split(',').length : 0;
             return (
-              <div key={sub.id} className="flex items-center justify-between py-3 gap-4">
+              <div 
+                key={sub.id} 
+                className="flex items-center justify-between py-3 gap-4 cursor-pointer hover:bg-gray-50/50 dark:hover:bg-[#0B1437]/50 transition-colors px-2 -mx-2 rounded-xl"
+                onClick={() => setSelectedSubmissionDetails(sub)}
+              >
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-9 h-9 rounded-full bg-[#F4F7FE] dark:bg-[#0B1437] flex items-center justify-center shrink-0 text-sm font-bold text-[#E41E26]">
-                    {sub.submitted_by?.charAt(0)?.toUpperCase() || '?'}
-                  </div>
                   <div className="min-w-0">
                     <p className="text-sm font-bold text-navy dark:text-white truncate">{sub.brand_label || sub.brand_code}</p>
                     <p className="text-xs text-gray-400 truncate">{sub.submitted_by} · {sub.province_label || sub.province_code}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
-                  {photoCount > 0 && (
-                    <span className="flex items-center gap-1 text-xs font-medium text-brand">
-                      <ImageIcon className="w-3.5 h-3.5" /> {photoCount}
-                    </span>
-                  )}
-                  <div className="text-right">
+                  <div className="w-8 flex justify-center">
+                    {photoCount > 0 && (
+                      <div className="relative inline-flex p-2 rounded-xl bg-[#F4F7FE] dark:bg-[#0B1437] text-[#E41E26]" title={`${photoCount} photo(s)`}>
+                        <ImageIcon className="w-4 h-4" />
+                        {photoCount > 1 && <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center border-2 border-white dark:border-[#111C44]">{photoCount}</span>}
+                      </div>
+                    )}
+                  </div>
+                  <div className="text-right min-w-[70px]">
                     <p className="text-xs font-bold text-gray-500 dark:text-gray-400">{dateStr}</p>
                     <p className="text-xs text-gray-400">{timeStr}</p>
                   </div>
-                  <button
-                    onClick={() => setSelectedSubmissionDetails(sub)}
-                    className="p-1.5 rounded-full text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition"
-                    title="View Details"
-                  >
-                    <Info className="w-4 h-4" />
-                  </button>
                 </div>
               </div>
             );

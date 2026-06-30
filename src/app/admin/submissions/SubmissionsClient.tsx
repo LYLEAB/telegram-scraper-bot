@@ -10,8 +10,10 @@ import {
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import PhotoModal from '../PhotoModal';
+import ExportModal from './ExportModal';
 import SubmissionDetailsModal from '../SubmissionDetailsModal';
 import dynamic from 'next/dynamic';
+import MultiSelect from '@/components/MultiSelect';
 
 const AdminMap = dynamic(() => import('../AdminMap'), { 
   ssr: false,
@@ -24,6 +26,16 @@ const AdminMap = dynamic(() => import('../AdminMap'), {
 
 type SortKey = 'date' | 'brand' | 'submitter' | 'province' | 'net_price' | 'basic_price';
 type SortDir = 'asc' | 'desc';
+
+// --- Helpers ---
+const getPhnomPenhDateStr = (dateVal: string | Date) => {
+  if (!dateVal) return '';
+  const d = new Date(dateVal);
+  if (isNaN(d.getTime())) return '';
+  // Format to YYYY-MM-DD in Asia/Phnom_Penh
+  const formatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Phnom_Penh', year: 'numeric', month: '2-digit', day: '2-digit' });
+  return formatter.format(d);
+};
 
 export default function SubmissionsClient({ 
   initialSubmissions, 
@@ -39,13 +51,39 @@ export default function SubmissionsClient({
 
   // --- Filters ---
   const [search, setSearch] = useState('');
-  const [brandFilter, setBrandFilter] = useState('');
-  const [provinceFilter, setProvinceFilter] = useState('');
+  const [categoryFilters, setCategoryFilters] = useState<string[]>([]);
+  const [brandFilters, setBrandFilters] = useState<string[]>([]);
+  const [skuFilters, setSkuFilters] = useState<string[]>([]);
+  const [priceSourceFilters, setPriceSourceFilters] = useState<string[]>([]);
+  const [provinceFilters, setProvinceFilters] = useState<string[]>([]);
+  const [channelFilters, setChannelFilters] = useState<string[]>([]);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
-  const [channelFilter, setChannelFilter] = useState('');
   const [onlyWithPhotos, setOnlyWithPhotos] = useState(false);
   const [onlyWithNotes, setOnlyWithNotes] = useState(false);
+
+  // Helper to extract short brand and sku from full brand_label
+  // e.g. "ABC Extra Stout Can 330ml" -> shortBrand: "ABC Extra Stout", sku: "Can 330ml"
+  const parseBrandAndSku = useCallback((fullBrandLabel: string) => {
+    if (!fullBrandLabel) return { shortBrand: '', sku: '' };
+    const parts = fullBrandLabel.trim().split(' ');
+    if (parts.length >= 3) {
+      const sku = parts.slice(-2).join(' ');
+      const shortBrand = parts.slice(0, -2).join(' ');
+      return { shortBrand, sku };
+    }
+    // Fallback if it doesn't match the standard format
+    return { shortBrand: fullBrandLabel, sku: '' };
+  }, []);
+
+  // Format price source for display
+  const formatPriceSource = useCallback((label: string | undefined | null) => {
+    if (!label) return 'NCP';
+    const lower = label.toLowerCase();
+    if (lower === 'company') return 'NCP';
+    if (lower === 'wholesale') return 'ORD';
+    return label;
+  }, []);
 
   // --- Sort ---
   const [sortKey, setSortKey] = useState<SortKey>('date');
@@ -60,11 +98,12 @@ export default function SubmissionsClient({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
 
-  // --- Modals ---
   const [selectedPhotos, setSelectedPhotos] = useState<string[]>([]);
   const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
   const [selectedSubmissionDetails, setSelectedSubmissionDetails] = useState<any>(null);
   const [submissionToDelete, setSubmissionToDelete] = useState<string | null>(null);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [exportData, setExportData] = useState<any[]>([]);
 
   // Listen for search from header
   useEffect(() => {
@@ -80,24 +119,77 @@ export default function SubmissionsClient({
     return Array.from(set).sort();
   }, [submissions]);
 
+  const categories = useMemo(() => {
+    const set = new Set<string>();
+    submissions.forEach(s => { if (s.category_label) set.add(s.category_label); });
+    return Array.from(set).sort();
+  }, [submissions]);
+
+  const availableBrands = useMemo(() => {
+    const set = new Set<string>();
+    submissions.forEach(s => {
+      // If categories are selected, filter by category
+      if (categoryFilters.length === 0 || categoryFilters.includes(s.category_label)) {
+        if (s.brand_label) {
+          const { shortBrand } = parseBrandAndSku(s.brand_label);
+          if (shortBrand) set.add(shortBrand);
+        }
+      }
+    });
+    return Array.from(set).sort();
+  }, [submissions, categoryFilters, parseBrandAndSku]);
+
+  const availableSkus = useMemo(() => {
+    const set = new Set<string>();
+    submissions.forEach(s => {
+      const matchCat = categoryFilters.length === 0 || categoryFilters.includes(s.category_label);
+      if (!matchCat) return;
+      
+      const { shortBrand, sku } = parseBrandAndSku(s.brand_label);
+      const matchBrand = brandFilters.length === 0 || brandFilters.includes(shortBrand);
+      
+      if (matchBrand && sku) {
+        set.add(sku);
+      }
+    });
+    return Array.from(set).sort();
+  }, [submissions, categoryFilters, brandFilters, parseBrandAndSku]);
+
+  const availablePriceSources = useMemo(() => {
+    const set = new Set<string>();
+    submissions.forEach(s => {
+      set.add(formatPriceSource(s.price_source_label));
+    });
+    return Array.from(set).sort();
+  }, [submissions, formatPriceSource]);
+
   // --- Filter + Sort ---
   const filteredSubmissions = useMemo(() => {
     let result = submissions.filter(sub => {
       const sl = search.toLowerCase();
       const matchSearch = !sl || [sub.submitted_by, sub.brand_label, sub.province_label, sub.district_label, sub.channel_label, sub.dealer_label]
         .some(v => v?.toLowerCase().includes(sl));
-      const matchBrand = !brandFilter || sub.brand_code === brandFilter;
-      const matchProvince = !provinceFilter || sub.province_code === provinceFilter;
-      const matchChannel = !channelFilter || sub.channel_label === channelFilter;
+      
+      const matchCategory = categoryFilters.length === 0 || categoryFilters.includes(sub.category_label);
+      
+      const { shortBrand, sku } = parseBrandAndSku(sub.brand_label);
+      const matchBrand = brandFilters.length === 0 || brandFilters.includes(shortBrand);
+      const matchSku = skuFilters.length === 0 || skuFilters.includes(sku);
+      
+      const formattedPS = formatPriceSource(sub.price_source_label);
+      const matchPriceSource = priceSourceFilters.length === 0 || priceSourceFilters.includes(formattedPS);
 
-      const dateStr = String(sub.phnom_penh_time || sub.created_at || '').slice(0, 10);
+      const matchProvince = provinceFilters.length === 0 || provinceFilters.includes(sub.province_code);
+      const matchChannel = channelFilters.length === 0 || channelFilters.includes(sub.channel_label);
+
+      const dateStr = getPhnomPenhDateStr(sub.created_at);
       const matchFrom = !dateFrom || dateStr >= dateFrom;
       const matchTo = !dateTo || dateStr <= dateTo;
 
       const matchPhotos = !onlyWithPhotos || !!sub.photo_url;
       const matchNotes = !onlyWithNotes || !!sub.note;
 
-      return matchSearch && matchBrand && matchProvince && matchChannel && matchFrom && matchTo && matchPhotos && matchNotes;
+      return matchSearch && matchCategory && matchBrand && matchSku && matchPriceSource && matchProvince && matchChannel && matchFrom && matchTo && matchPhotos && matchNotes;
     });
 
     // Sort
@@ -121,9 +213,9 @@ export default function SubmissionsClient({
     });
 
     return result;
-  }, [submissions, search, brandFilter, provinceFilter, channelFilter, dateFrom, dateTo, onlyWithPhotos, onlyWithNotes, sortKey, sortDir]);
+  }, [submissions, search, categoryFilters, brandFilters, skuFilters, priceSourceFilters, provinceFilters, channelFilters, dateFrom, dateTo, onlyWithPhotos, onlyWithNotes, sortKey, sortDir, parseBrandAndSku, formatPriceSource]);
 
-  useEffect(() => { setCurrentPage(1); setSelectedIds(new Set()); }, [search, brandFilter, provinceFilter, channelFilter, dateFrom, dateTo, onlyWithPhotos, onlyWithNotes]);
+  useEffect(() => { setCurrentPage(1); setSelectedIds(new Set()); }, [search, categoryFilters, brandFilters, skuFilters, priceSourceFilters, provinceFilters, channelFilters, dateFrom, dateTo, onlyWithPhotos, onlyWithNotes]);
 
   const totalPages = Math.ceil(filteredSubmissions.length / itemsPerPage);
   const paginatedSubmissions = filteredSubmissions.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
@@ -144,26 +236,32 @@ export default function SubmissionsClient({
 
   // --- Quick Stats ---
   const stats = useMemo(() => {
-    const today = new Date().toISOString().slice(0, 10);
-    const todayCount = filteredSubmissions.filter(s => String(s.phnom_penh_time || s.created_at).startsWith(today)).length;
+    // Current time in Phnom Penh
+    const now = new Date();
+    const todayStr = getPhnomPenhDateStr(now);
+    
+    // Yesterday in Phnom Penh
+    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const yesterdayStr = getPhnomPenhDateStr(yesterday);
+
+    const todayCount = filteredSubmissions.filter(s => getPhnomPenhDateStr(s.created_at) === todayStr).length;
     const withPhotos = filteredSubmissions.filter(s => s.photo_url).length;
     const withNotes = filteredSubmissions.filter(s => s.note).length;
     const avgPrice = priceStats.avg;
 
     // vs yesterday
-    const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
-    const yStr = yesterday.toISOString().slice(0, 10);
-    const yesterdayCount = submissions.filter(s => String(s.phnom_penh_time || s.created_at).startsWith(yStr)).length;
+    const yesterdayCount = submissions.filter(s => getPhnomPenhDateStr(s.created_at) === yesterdayStr).length;
     const todayGrowth = yesterdayCount > 0 ? ((todayCount - yesterdayCount) / yesterdayCount * 100).toFixed(0) : null;
 
     return { total: filteredSubmissions.length, todayCount, withPhotos, withNotes, avgPrice, todayGrowth, yesterdayCount };
   }, [filteredSubmissions, submissions, priceStats]);
 
-  const activeFilterCount = [brandFilter, provinceFilter, channelFilter, dateFrom, dateTo, search, onlyWithPhotos, onlyWithNotes].filter(Boolean).length;
+  const activeFilterCount = categoryFilters.length + brandFilters.length + skuFilters.length + priceSourceFilters.length + provinceFilters.length + channelFilters.length + (dateFrom || dateTo ? 1 : 0) + (search ? 1 : 0) + (onlyWithPhotos ? 1 : 0) + (onlyWithNotes ? 1 : 0);
 
   const clearFilters = () => {
-    setSearch(''); setBrandFilter(''); setProvinceFilter('');
-    setChannelFilter(''); setDateFrom(''); setDateTo('');
+    setSearch(''); setCategoryFilters([]); setBrandFilters([]); 
+    setSkuFilters([]); setPriceSourceFilters([]); setProvinceFilters([]);
+    setChannelFilters([]); setDateFrom(''); setDateTo('');
     setOnlyWithPhotos(false); setOnlyWithNotes(false);
   };
 
@@ -214,33 +312,12 @@ export default function SubmissionsClient({
   };
 
   // Export
-  const handleExportExcel = (idsToExport?: string[]) => {
+  const triggerExport = (idsToExport?: string[]) => {
     const data = idsToExport
       ? filteredSubmissions.filter(s => idsToExport.includes(s.id))
       : filteredSubmissions;
-
-    const headers = ['No.', 'Date', 'Time', 'Brand', 'Category', 'Dealer', 'Province', 'District', 'Channel', 'Sub Channel', 'Basic Price ($)', 'Net Price ($)', 'Submitted By', 'Note', 'Has Photo'];
-    const rows = data.map((sub, i) => {
-      const d = new Date(sub.phnom_penh_time || sub.created_at);
-      return [
-        i + 1,
-        d.toLocaleDateString('en-US', { timeZone: 'UTC' }),
-        d.toLocaleTimeString('en-US', { timeZone: 'UTC' }),
-        sub.brand_label || '', sub.category_label || '',
-        sub.dealer_label || '', sub.province_label || '', sub.district_label || '',
-        sub.channel_label || '', sub.sub_channel_label || '',
-        sub.basic_price || '', sub.net_price || '',
-        sub.submitted_by || '', sub.note || '',
-        sub.photo_url ? 'Yes' : 'No',
-      ];
-    });
-    const info = [`Exported ${data.length} records — ${new Date().toLocaleString()}`];
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.aoa_to_sheet([[...info], [], headers, ...rows]);
-    if (!ws['!merges']) ws['!merges'] = [];
-    ws['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 14 } });
-    XLSX.utils.book_append_sheet(wb, ws, 'Submissions');
-    XLSX.writeFile(wb, `Submissions_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    setExportData(data);
+    setIsExportModalOpen(true);
   };
 
   const openPhotos = (urlsString: string) => {
@@ -371,41 +448,80 @@ export default function SubmissionsClient({
           </div>
         </div>
 
-        {/* Row 1: search + brand + province + channel */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
-          <div className="relative lg:col-span-1">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search submitter, brand, location..."
-              className="w-full rounded-xl bg-[#F4F7FE] dark:bg-[#0B1437] py-2.5 pl-9 pr-4 text-sm font-medium text-navy dark:text-white outline-none focus:ring-2 focus:ring-[#E41E26]/30 placeholder:text-gray-400"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-            />
-          </div>
-          <select className="rounded-xl bg-[#F4F7FE] dark:bg-[#0B1437] py-2.5 px-4 text-sm font-medium text-navy dark:text-white outline-none focus:ring-2 focus:ring-[#E41E26]/30 appearance-none cursor-pointer" value={brandFilter} onChange={e => setBrandFilter(e.target.value)}>
-            <option value="">All Brands</option>
-            {brands.map(b => <option key={b.code} value={b.code}>{b.label}</option>)}
-          </select>
-          <select className="rounded-xl bg-[#F4F7FE] dark:bg-[#0B1437] py-2.5 px-4 text-sm font-medium text-navy dark:text-white outline-none focus:ring-2 focus:ring-[#E41E26]/30 appearance-none cursor-pointer" value={provinceFilter} onChange={e => setProvinceFilter(e.target.value)}>
-            <option value="">All Provinces</option>
-            {provinces.map(p => <option key={p.code} value={p.code}>{p.label}</option>)}
-          </select>
-          <select className="rounded-xl bg-[#F4F7FE] dark:bg-[#0B1437] py-2.5 px-4 text-sm font-medium text-navy dark:text-white outline-none focus:ring-2 focus:ring-[#E41E26]/30 appearance-none cursor-pointer" value={channelFilter} onChange={e => setChannelFilter(e.target.value)}>
-            <option value="">All Channels</option>
-            {channels.map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
+        {/* Search Bar */}
+        <div className="relative mb-3">
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search submitter, brand, location..."
+            className="w-full rounded-xl bg-[#F4F7FE] dark:bg-[#0B1437] py-2.5 pl-9 pr-4 text-sm font-medium text-navy dark:text-white outline-none focus:ring-2 focus:ring-[#E41E26]/30 placeholder:text-gray-400"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+        </div>
+
+        {/* Dropdowns Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3 mb-3">
+          <MultiSelect 
+            options={categories}
+            selectedValues={categoryFilters}
+            onChange={(vals) => {
+              setCategoryFilters(vals);
+              // Clear dependent filters
+              setBrandFilters([]);
+              setSkuFilters([]);
+            }}
+            placeholder="All Categories"
+          />
+          <MultiSelect 
+            options={availableBrands}
+            selectedValues={brandFilters}
+            onChange={(vals) => {
+              setBrandFilters(vals);
+              // Clear dependent filters
+              setSkuFilters([]);
+            }}
+            placeholder="All Brands"
+          />
+          <MultiSelect 
+            options={availableSkus}
+            selectedValues={skuFilters}
+            onChange={setSkuFilters}
+            placeholder="All SKUs"
+          />
+          <MultiSelect 
+            options={availablePriceSources}
+            selectedValues={priceSourceFilters}
+            onChange={setPriceSourceFilters}
+            placeholder="All NCP/ORD"
+          />
+          <MultiSelect 
+            options={provinces.map(p => p.label)}
+            selectedValues={provinceFilters}
+            onChange={(labels) => {
+              // Convert labels to codes
+              const codes = labels.map(l => provinces.find(p => p.label === l)?.code || l);
+              setProvinceFilters(codes);
+            }}
+            placeholder="All Provinces"
+          />
+          <MultiSelect 
+            options={channels}
+            selectedValues={channelFilters}
+            onChange={setChannelFilters}
+            placeholder="All Channels"
+          />
         </div>
 
         {/* Row 2: date range + toggles */}
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 font-medium">
-            <span className="text-xs font-bold uppercase tracking-wider">Date Range:</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <input type="date" className="rounded-xl bg-[#F4F7FE] dark:bg-[#0B1437] py-2 px-3 text-sm font-medium text-navy dark:text-white outline-none focus:ring-2 focus:ring-[#E41E26]/30 cursor-pointer" value={dateFrom} onChange={e => setDateFrom(e.target.value)} />
-            <span className="text-gray-400 text-sm font-medium">→</span>
-            <input type="date" className="rounded-xl bg-[#F4F7FE] dark:bg-[#0B1437] py-2 px-3 text-sm font-medium text-navy dark:text-white outline-none focus:ring-2 focus:ring-[#E41E26]/30 cursor-pointer" value={dateTo} onChange={e => setDateTo(e.target.value)} />
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-semibold text-navy dark:text-white">Date Range:</span>
+            <div className="flex items-center gap-2">
+              <input type="date" className="rounded-xl bg-[#F4F7FE] dark:bg-[#0B1437] py-2.5 px-4 text-sm font-medium text-navy dark:text-white outline-none focus:ring-2 focus:ring-[#E41E26]/30 cursor-pointer" value={dateFrom} onChange={e => setDateFrom(e.target.value)} />
+              <span className="text-gray-400 font-medium text-sm">to</span>
+              <input type="date" className="rounded-xl bg-[#F4F7FE] dark:bg-[#0B1437] py-2.5 px-4 text-sm font-medium text-navy dark:text-white outline-none focus:ring-2 focus:ring-[#E41E26]/30 cursor-pointer" value={dateTo} onChange={e => setDateTo(e.target.value)} />
+            </div>
           </div>
 
           <div className="flex items-center gap-2 ml-auto">
@@ -427,9 +543,12 @@ export default function SubmissionsClient({
         {/* Active filter tags + result count */}
         {activeFilterCount > 0 && (
           <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-gray-100 dark:border-gray-800">
-            {brandFilter && <span className="text-xs bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 px-2.5 py-1 rounded-full font-medium flex items-center gap-1">{brands.find(b => b.code === brandFilter)?.label}<button onClick={() => setBrandFilter('')}><X className="w-3 h-3" /></button></span>}
-            {provinceFilter && <span className="text-xs bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 px-2.5 py-1 rounded-full font-medium flex items-center gap-1">{provinces.find(p => p.code === provinceFilter)?.label}<button onClick={() => setProvinceFilter('')}><X className="w-3 h-3" /></button></span>}
-            {channelFilter && <span className="text-xs bg-cyan-50 dark:bg-cyan-900/20 text-cyan-700 dark:text-cyan-300 px-2.5 py-1 rounded-full font-medium flex items-center gap-1">{channelFilter}<button onClick={() => setChannelFilter('')}><X className="w-3 h-3" /></button></span>}
+            {categoryFilters.map(v => <span key={v} className="text-xs bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 px-2.5 py-1 rounded-full font-medium flex items-center gap-1">{v}<button onClick={() => setCategoryFilters(prev => prev.filter(x => x !== v))}><X className="w-3 h-3" /></button></span>)}
+            {brandFilters.map(v => <span key={v} className="text-xs bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 px-2.5 py-1 rounded-full font-medium flex items-center gap-1">{v}<button onClick={() => setBrandFilters(prev => prev.filter(x => x !== v))}><X className="w-3 h-3" /></button></span>)}
+            {skuFilters.map(v => <span key={v} className="text-xs bg-pink-50 dark:bg-pink-900/20 text-pink-700 dark:text-pink-300 px-2.5 py-1 rounded-full font-medium flex items-center gap-1">{v}<button onClick={() => setSkuFilters(prev => prev.filter(x => x !== v))}><X className="w-3 h-3" /></button></span>)}
+            {priceSourceFilters.map(v => <span key={v} className="text-xs bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 px-2.5 py-1 rounded-full font-medium flex items-center gap-1">{v}<button onClick={() => setPriceSourceFilters(prev => prev.filter(x => x !== v))}><X className="w-3 h-3" /></button></span>)}
+            {provinceFilters.map(v => <span key={v} className="text-xs bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 px-2.5 py-1 rounded-full font-medium flex items-center gap-1">{provinces.find(p => p.code === v)?.label || v}<button onClick={() => setProvinceFilters(prev => prev.filter(x => x !== v))}><X className="w-3 h-3" /></button></span>)}
+            {channelFilters.map(v => <span key={v} className="text-xs bg-cyan-50 dark:bg-cyan-900/20 text-cyan-700 dark:text-cyan-300 px-2.5 py-1 rounded-full font-medium flex items-center gap-1">{v}<button onClick={() => setChannelFilters(prev => prev.filter(x => x !== v))}><X className="w-3 h-3" /></button></span>)}
             {(dateFrom || dateTo) && <span className="text-xs bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 px-2.5 py-1 rounded-full font-medium flex items-center gap-1">{dateFrom || '…'} → {dateTo || '…'}<button onClick={() => { setDateFrom(''); setDateTo(''); }}><X className="w-3 h-3" /></button></span>}
             {search && <span className="text-xs bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 px-2.5 py-1 rounded-full font-medium flex items-center gap-1">"{search}"<button onClick={() => setSearch('')}><X className="w-3 h-3" /></button></span>}
             <span className="text-xs text-gray-400 ml-auto font-medium">{filteredSubmissions.length} of {submissions.length} records</span>
@@ -443,7 +562,7 @@ export default function SubmissionsClient({
           <p className="text-sm font-bold text-white">{selectedIds.size} row{selectedIds.size > 1 ? 's' : ''} selected</p>
           <div className="flex items-center gap-3">
             <button
-              onClick={() => handleExportExcel(Array.from(selectedIds))}
+              onClick={() => triggerExport(Array.from(selectedIds))}
               className="inline-flex items-center gap-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-bold px-4 py-2 transition"
             >
               <Download className="w-3.5 h-3.5" /> Export Selected
@@ -465,10 +584,10 @@ export default function SubmissionsClient({
       {!someSelected && (
         <div className="flex justify-end">
           <button
-            onClick={() => handleExportExcel()}
+            onClick={() => triggerExport()}
             className="inline-flex items-center gap-2 rounded-full bg-[#E41E26] py-2.5 px-5 text-sm font-bold text-white hover:bg-[#C21820] transition shadow-sm shadow-red-500/20"
           >
-            <FileSpreadsheet className="w-4 h-4" /> Export to Excel
+            <Download className="w-4 h-4" /> Export
             {activeFilterCount > 0 && <span className="bg-white/20 rounded-full px-2 py-0.5 text-xs">{filteredSubmissions.length}</span>}
           </button>
         </div>
@@ -487,105 +606,160 @@ export default function SubmissionsClient({
                     </button>
                   </th>
                   <th className="py-3 px-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider w-10">#</th>
-                  <th className="py-3 px-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider min-w-[110px] cursor-pointer select-none hover:text-navy dark:hover:text-white transition" onClick={() => handleSort('date')}>
+                  <th className="py-3 px-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider min-w-[90px] cursor-pointer select-none hover:text-navy dark:hover:text-white transition" onClick={() => handleSort('date')}>
                     Date <SortIcon col="date" />
                   </th>
-                  <th className="py-3 px-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider min-w-[160px] cursor-pointer select-none hover:text-navy dark:hover:text-white transition" onClick={() => handleSort('brand')}>
-                    Product <SortIcon col="brand" />
+                  <th className="py-3 px-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider min-w-[120px]">
+                    Category/Ch.
                   </th>
-                  <th className="py-3 px-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider min-w-[110px] cursor-pointer select-none hover:text-navy dark:hover:text-white transition" onClick={() => handleSort('submitter')}>
-                    Submitter <SortIcon col="submitter" />
+                  <th className="py-3 px-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider min-w-[140px] cursor-pointer select-none hover:text-navy dark:hover:text-white transition" onClick={() => handleSort('brand')}>
+                    Brand/SKU <SortIcon col="brand" />
                   </th>
-                  <th className="py-3 px-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider min-w-[140px] cursor-pointer select-none hover:text-navy dark:hover:text-white transition" onClick={() => handleSort('province')}>
-                    Location <SortIcon col="province" />
+                  <th className="py-3 px-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider min-w-[100px] cursor-pointer select-none hover:text-navy dark:hover:text-white transition">
+                    Pricing
                   </th>
-                  <th className="py-3 px-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider min-w-[110px]">Channel</th>
-                  <th className="py-3 px-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider min-w-[110px] cursor-pointer select-none hover:text-navy dark:hover:text-white transition" onClick={() => handleSort('net_price')}>
-                    Price <SortIcon col="net_price" />
+                  <th className="py-3 px-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider min-w-[100px]">Promo</th>
+                  <th className="py-3 px-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider min-w-[120px]">Sellout</th>
+                  <th className="py-3 px-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider min-w-[140px] cursor-pointer select-none hover:text-navy dark:hover:text-white transition" onClick={() => handleSort('province')}>
+                    Details <SortIcon col="province" />
                   </th>
-                  <th className="py-3 px-4 text-center text-[11px] font-bold text-gray-400 uppercase tracking-wider">Media</th>
-                  <th className="py-3 px-4 text-right text-[11px] font-bold text-gray-400 uppercase tracking-wider">Actions</th>
+                  <th className="py-3 px-2 text-center font-bold text-gray-500 text-xs w-12 uppercase tracking-wider">Media</th>
+                  <th className="py-3 px-2 text-center font-bold text-gray-500 text-xs w-12 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {paginatedSubmissions.length > 0 ? paginatedSubmissions.map((sub, key) => {
-                  const dateObj = new Date(sub.phnom_penh_time || sub.created_at);
+                  const dateObj = new Date(sub.created_at);
                   const photoCount = sub.photo_url ? sub.photo_url.split(',').length : 0;
-                  const netPrice = Number(sub.net_price);
-                  const isAnomaly = isPriceAnomaly(netPrice);
                   const isSelected = selectedIds.has(sub.id);
+
+                  const formatPriceSource = (label: string | undefined | null) => {
+                    if (!label) return 'NCP';
+                    const lower = label.toLowerCase();
+                    if (lower === 'company') return 'NCP';
+                    if (lower === 'wholesale') return 'ORD';
+                    return label;
+                  };
+                  
+                  const parseScheme = (schemeString: string) => {
+                    if (!schemeString) return { scheme: '—', foc: '—' };
+                    const plusMatch = schemeString.match(/^(\d+)\s*\+\s*(\d+)$/);
+                    if (plusMatch) return { scheme: plusMatch[1], foc: plusMatch[2] };
+                    return { scheme: schemeString, foc: '—' };
+                  };
+
+                  const parseBrandAndSku = (fullBrandLabel: string) => {
+                    if (!fullBrandLabel) return { shortBrand: '—', sku: '—' };
+                    const parts = fullBrandLabel.trim().split(' ');
+                    if (parts.length >= 3) {
+                      return {
+                        shortBrand: parts.slice(0, -2).join(' '),
+                        sku: parts.slice(-2).join(' ')
+                      };
+                    }
+                    return { shortBrand: fullBrandLabel, sku: '—' };
+                  };
+
+                  const { shortBrand, sku } = parseBrandAndSku(sub.brand_label);
+                  const { scheme, foc } = parseScheme(sub.scheme);
+                  const source = formatPriceSource(sub.price_source_label);
+
+                  let computedNetPrice = sub.net_price;
+                  if (!computedNetPrice && sub.basic_price && scheme !== '—' && foc !== '—') {
+                    const s = Number(scheme);
+                    const f = Number(foc);
+                    if (s > 0 && f > 0) {
+                      computedNetPrice = ((Number(sub.basic_price) * s) / (s + f)).toFixed(2);
+                    } else {
+                      computedNetPrice = sub.basic_price;
+                    }
+                  } else if (!computedNetPrice && sub.basic_price) {
+                    computedNetPrice = sub.basic_price;
+                  }
+
+                  const isAnomaly = isPriceAnomaly(Number(computedNetPrice));
 
                   return (
                     <tr
                       key={sub.id}
-                      className={`transition-colors ${isSelected ? 'bg-blue-50/50 dark:bg-blue-900/10' : 'hover:bg-gray-50/50 dark:hover:bg-[#0B1437]/50'} ${key < paginatedSubmissions.length - 1 ? 'border-b border-gray-100 dark:border-gray-800' : ''}`}
+                      onClick={() => setSelectedSubmissionDetails(sub)}
+                      className={`transition-colors cursor-pointer ${isSelected ? 'bg-blue-50/50 dark:bg-blue-900/10' : 'hover:bg-gray-50/50 dark:hover:bg-[#0B1437]/50'} ${key < paginatedSubmissions.length - 1 ? 'border-b border-gray-100 dark:border-gray-800' : ''}`}
                     >
-                      <td className="py-3 px-4">
-                        <button onClick={() => toggleSelect(sub.id)} className="text-gray-400 hover:text-[#E41E26] transition">
+                      <td className="py-3 px-4 w-10">
+                        <button onClick={(e) => { e.stopPropagation(); toggleSelect(sub.id); }} className="text-gray-400 hover:text-[#E41E26] transition">
                           {isSelected ? <CheckSquare className="w-4 h-4 text-[#E41E26]" /> : <Square className="w-4 h-4" />}
                         </button>
                       </td>
                       <td className="py-3 px-3 text-xs font-bold text-gray-300 dark:text-gray-600">{(currentPage - 1) * itemsPerPage + key + 1}</td>
-                      <td className="py-3 px-4">
-                        <p className="text-sm font-bold text-navy dark:text-white">{dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })}</p>
-                        <p className="text-xs text-gray-400 mt-0.5">{dateObj.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'UTC' })}</p>
+                      <td className="py-3 px-3">
+                        <p className="text-sm font-bold text-navy dark:text-white whitespace-nowrap">{dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'Asia/Phnom_Penh' })}</p>
+                        <p className="text-[10px] text-gray-400 mt-0.5 whitespace-nowrap">{dateObj.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'Asia/Phnom_Penh' })}</p>
                       </td>
-                      <td className="py-3 px-4">
-                        <p className="text-sm font-bold text-navy dark:text-white leading-tight">{sub.brand_label}</p>
-                        <p className="text-xs text-gray-400 mt-0.5">{sub.category_label || sub.type_label || '—'}</p>
+                      <td className="py-3 px-3">
+                        <p className="text-sm font-bold text-navy dark:text-white leading-tight">{sub.category_label || '—'}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">{sub.channel_label || '—'}</p>
                       </td>
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-2">
-                          <div className="w-7 h-7 rounded-full bg-[#F4F7FE] dark:bg-[#0B1437] flex items-center justify-center text-xs font-bold text-[#E41E26] shrink-0">
-                            {sub.submitted_by?.charAt(0)?.toUpperCase() || '?'}
+                      <td className="py-3 px-3">
+                        <p className="text-sm font-bold text-navy dark:text-white leading-tight">{shortBrand}</p>
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <span className="text-[10px] bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 px-1.5 py-0.5 rounded font-bold">{sku}</span>
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${source === 'NCP' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' : 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300'}`}>{source}</span>
+                        </div>
+                      </td>
+                      <td className="py-3 px-3">
+                        <div className="space-y-1 min-w-[80px]">
+                          <div className="flex items-center justify-between text-[11px] bg-gray-50 dark:bg-[#0B1437] px-1.5 py-0.5 rounded">
+                            <span className="text-gray-400">In</span>
+                            <span className="font-bold text-navy dark:text-white">${sub.basic_price || '—'}</span>
                           </div>
-                          <div>
-                            <p className="text-sm font-bold text-navy dark:text-white leading-none">{sub.submitted_by}</p>
-                            {sub.note && <span className="text-[10px] font-bold text-amber-500 flex items-center gap-0.5 mt-0.5"><StickyNote className="w-2.5 h-2.5" />Note</span>}
+                          <div className={`flex items-center justify-between text-[11px] px-1.5 py-0.5 rounded ${isAnomaly ? 'bg-red-50 dark:bg-red-900/20' : 'bg-gray-50 dark:bg-[#0B1437]'}`}>
+                            <span className="text-gray-400">Net</span>
+                            <span className={`font-bold flex items-center gap-1 ${isAnomaly ? 'text-red-600 dark:text-red-400' : 'text-[#E41E26]'}`}>
+                              {isAnomaly && <AlertCircle className="w-2.5 h-2.5" />}
+                              ${computedNetPrice || '—'}
+                            </span>
                           </div>
                         </div>
                       </td>
-                      <td className="py-3 px-4">
-                        {sub.lat && sub.lng ? (
-                          <a href={`https://www.google.com/maps?q=${sub.lat},${sub.lng}`} target="_blank" rel="noopener noreferrer" className="flex items-start gap-1.5 group hover:opacity-70 transition">
-                            <MapPin className="w-3.5 h-3.5 text-[#E41E26] shrink-0 mt-0.5" />
-                            <div>
-                              <p className="text-sm font-bold text-navy dark:text-white group-hover:text-[#E41E26] transition">{sub.district_label}</p>
-                              <p className="text-xs text-gray-400">{sub.province_label}</p>
-                            </div>
-                          </a>
-                        ) : (
-                          <div className="flex items-start gap-1.5">
-                            <MapPin className="w-3.5 h-3.5 text-gray-300 shrink-0 mt-0.5" />
-                            <div>
-                              <p className="text-sm font-bold text-navy dark:text-white">{sub.district_label}</p>
-                              <p className="text-xs text-gray-400">{sub.province_label}</p>
-                            </div>
+                      <td className="py-3 px-3">
+                        <div className="space-y-1 min-w-[70px]">
+                          <div className="flex items-center justify-between text-[11px] bg-gray-50 dark:bg-[#0B1437] px-1.5 py-0.5 rounded">
+                            <span className="text-gray-400">Schm</span>
+                            <span className="font-bold text-navy dark:text-white">{scheme}</span>
                           </div>
-                        )}
-                      </td>
-                      <td className="py-3 px-4">
-                        <p className="text-sm font-bold text-navy dark:text-white">{sub.channel_label || '—'}</p>
-                        <p className="text-xs text-gray-400">{sub.sub_channel_label || ''}</p>
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="space-y-1 min-w-[80px]">
-                          <div className="flex items-center justify-between text-xs bg-gray-50 dark:bg-[#0B1437] px-2 py-1 rounded-lg">
-                            <span className="text-gray-400">Basic</span>
-                            <span className="font-bold text-navy dark:text-white">${sub.basic_price || '—'}</span>
+                          <div className="flex items-center justify-between text-[11px] bg-gray-50 dark:bg-[#0B1437] px-1.5 py-0.5 rounded">
+                            <span className="text-gray-400">FOC</span>
+                            <span className="font-bold text-navy dark:text-white">{foc}</span>
                           </div>
-                          <div className={`flex items-center justify-between text-xs px-2 py-1 rounded-lg ${isAnomaly ? 'bg-red-50 dark:bg-red-900/20' : 'bg-gray-50 dark:bg-[#0B1437]'}`}>
-                            <span className="text-gray-400">Net</span>
-                            <span className={`font-bold flex items-center gap-1 ${isAnomaly ? 'text-red-600 dark:text-red-400' : 'text-[#E41E26]'}`}>
-                              {isAnomaly && <AlertCircle className="w-3 h-3" />}
-                              ${sub.net_price || '—'}
-                            </span>
+                        </div>
+                      </td>
+                      <td className="py-3 px-3">
+                        <div className="space-y-1 min-w-[90px]">
+                          <div className="flex items-center justify-between text-[11px] bg-gray-50 dark:bg-[#0B1437] px-1.5 py-0.5 rounded" title="Sellout to Seller">
+                            <span className="text-gray-400 text-[10px]">W/S(Ctn)</span>
+                            <span className="font-bold text-navy dark:text-white">{sub.sellout_price_seller ? `$${sub.sellout_price_seller}` : '—'}</span>
+                          </div>
+                          <div className="flex items-center justify-between text-[11px] bg-gray-50 dark:bg-[#0B1437] px-1.5 py-0.5 rounded" title="Consumer Price">
+                            <span className="text-gray-400 text-[10px]">Cons(Ctn)</span>
+                            <span className="font-bold text-navy dark:text-white">{sub.sellout_price_consumer ? `$${sub.sellout_price_consumer}` : '—'}</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3 px-3">
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-1.5 truncate max-w-[120px]" title={sub.submitted_by}>
+                            <p className="text-[11px] font-bold text-navy dark:text-white truncate">{sub.submitted_by}</p>
+                            {sub.note && <StickyNote className="w-2.5 h-2.5 text-amber-500 shrink-0" title="Has Note" />}
+                          </div>
+                          <div className="flex items-center gap-1 truncate max-w-[120px]" title={`${sub.district_label}, ${sub.province_label}`}>
+                            <MapPin className="w-2.5 h-2.5 text-gray-400 shrink-0" />
+                            <p className="text-[10px] text-gray-400 truncate">{sub.district_label || sub.province_label}</p>
                           </div>
                         </div>
                       </td>
                       <td className="py-3 px-4 text-center">
                         {photoCount > 0 ? (
-                          <button onClick={() => openPhotos(sub.photo_url)} className="relative inline-flex p-2 rounded-xl bg-[#F4F7FE] dark:bg-[#0B1437] text-[#E41E26] hover:bg-red-50 dark:hover:bg-red-900/20 transition" title={`${photoCount} photo(s)`}>
+                          <button onClick={(e) => { e.stopPropagation(); openPhotos(sub.photo_url); }} className="relative inline-flex p-2 rounded-xl bg-[#F4F7FE] dark:bg-[#0B1437] text-[#E41E26] hover:bg-red-50 dark:hover:bg-red-900/20 transition" title={`${photoCount} photo(s)`}>
                             <ImageIcon className="w-4 h-4" />
                             {photoCount > 1 && <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center border-2 border-white dark:border-[#111C44]">{photoCount}</span>}
                           </button>
@@ -594,12 +768,9 @@ export default function SubmissionsClient({
                         )}
                       </td>
                       <td className="py-3 px-4">
-                        <div className="flex items-center justify-end gap-1">
-                          <button onClick={() => setSelectedSubmissionDetails(sub)} className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition" title="View Details">
-                            <Info className="w-4 h-4" />
-                          </button>
+                        <div className="flex items-center justify-center gap-1">
                           <button
-                            onClick={() => setSubmissionToDelete(sub.id)}
+                            onClick={(e) => { e.stopPropagation(); setSubmissionToDelete(sub.id); }}
                             disabled={isDeleting === sub.id}
                             className={`p-1.5 rounded-lg transition ${isDeleting === sub.id ? 'text-gray-300 cursor-not-allowed' : 'text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20'}`}
                             title="Delete"
@@ -652,6 +823,7 @@ export default function SubmissionsClient({
       {/* Modals */}
       <PhotoModal isOpen={isPhotoModalOpen} onClose={() => setIsPhotoModalOpen(false)} photos={selectedPhotos} />
       <SubmissionDetailsModal isOpen={!!selectedSubmissionDetails} onClose={() => setSelectedSubmissionDetails(null)} submission={selectedSubmissionDetails} />
+      <ExportModal isOpen={isExportModalOpen} onClose={() => setIsExportModalOpen(false)} data={exportData} />
 
       {/* Single Delete Confirm */}
       {submissionToDelete && (
