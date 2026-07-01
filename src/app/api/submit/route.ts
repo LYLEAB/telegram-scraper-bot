@@ -55,12 +55,20 @@ export async function POST(request: Request) {
 
     const photoUrlString = photoUrls.length > 0 ? photoUrls.join(',') : null;
 
+    let finalTypeSelect = data.type_select_code || null;
+    if (!finalTypeSelect) {
+      const { data: fallbackType } = await supabaseAdmin.from('type_selects').select('code').limit(1).maybeSingle();
+      if (fallbackType) {
+        finalTypeSelect = fallbackType.code;
+      }
+    }
+
     // 2. Insert into Supabase using Admin client to bypass RLS
     const { data: insertedData, error: dbError } = await supabaseAdmin
       .from('submissions')
       .insert([
         {
-          submitted_by: data.submitted_by || null,
+          submitted_by: data.submitted_by || "Unknown",
           submission_date: data.submission_date,
           region_code: data.region_code || null,
           dealer_code: data.dealer_code || null,
@@ -72,7 +80,7 @@ export async function POST(request: Request) {
           channel_code: data.channel_code || null,
           sub_channel_code: data.sub_channel_code || null,
           price_source_code: data.price_source_code || null,
-          type_select_code: data.type_select_code || null,
+          type_select_code: finalTypeSelect,
           scheme: data.scheme || null,
           basic_price: formatPriceDB(data.basic_price),
           net_price: formatPriceDB(data.net_price),
