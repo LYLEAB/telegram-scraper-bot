@@ -344,8 +344,8 @@ export default function SubmissionsClient({
       {/* KPI Cards — matching Dashboard style */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {/* Card 1: Total */}
-        <div className="rounded-[16px] bg-white dark:bg-[#111C44] shadow-horizon border-l-[4px] border-blue-600 p-5 relative overflow-hidden">
-          <div className="flex justify-between items-start mb-4">
+        <div className="rounded-[16px] bg-white dark:bg-[#111C44] shadow-horizon border-l-[4px] border-blue-600 p-4 relative overflow-hidden">
+          <div className="flex justify-between items-start mb-3">
             <p className="text-[11px] font-bold text-gray-400 dark:text-gray-500 tracking-wider uppercase">
               {activeFilterCount > 0 ? 'Filtered Records' : 'Total Records'}
             </p>
@@ -353,8 +353,8 @@ export default function SubmissionsClient({
               <FileSpreadsheet className="w-4 h-4 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
-          <h4 className="text-3xl font-extrabold text-navy dark:text-white mb-2">{stats.total.toLocaleString()}</h4>
-          <div className="text-xs font-medium text-gray-500 dark:text-gray-400">
+          <h4 className="text-3xl font-extrabold text-navy dark:text-white mb-1">{stats.total.toLocaleString()}</h4>
+          <div className="flex items-center text-xs font-medium">
             {activeFilterCount > 0
               ? <span className="text-blue-600 font-bold">{activeFilterCount} filter{activeFilterCount > 1 ? 's' : ''} active</span>
               : <span>All submissions in database</span>
@@ -363,15 +363,15 @@ export default function SubmissionsClient({
         </div>
 
         {/* Card 2: Today */}
-        <div className="rounded-[16px] bg-white dark:bg-[#111C44] shadow-horizon border-l-[4px] border-green-500 p-5 relative overflow-hidden">
-          <div className="flex justify-between items-start mb-4">
+        <div className="rounded-[16px] bg-white dark:bg-[#111C44] shadow-horizon border-l-[4px] border-green-500 p-4 relative overflow-hidden">
+          <div className="flex justify-between items-start mb-3">
             <p className="text-[11px] font-bold text-gray-400 dark:text-gray-500 tracking-wider uppercase">Submitted Today</p>
             <div className="w-8 h-8 rounded-lg bg-green-50 dark:bg-green-900/30 flex items-center justify-center">
               <Clock className="w-4 h-4 text-green-600 dark:text-green-400" />
             </div>
           </div>
-          <h4 className="text-3xl font-extrabold text-navy dark:text-white mb-2">{stats.todayCount}</h4>
-          <div className="text-xs font-medium text-gray-500 dark:text-gray-400">
+          <h4 className="text-3xl font-extrabold text-navy dark:text-white mb-1">{stats.todayCount}</h4>
+          <div className="flex items-center text-xs font-medium">
             {stats.todayGrowth !== null ? (
               <span className={`font-bold flex items-center gap-1 ${Number(stats.todayGrowth) >= 0 ? 'text-green-600' : 'text-red-500'}`}>
                 {Number(stats.todayGrowth) >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
@@ -384,15 +384,15 @@ export default function SubmissionsClient({
         </div>
 
         {/* Card 3: With Photos */}
-        <div className="rounded-[16px] bg-white dark:bg-[#111C44] shadow-horizon border-l-[4px] border-purple-500 p-5 relative overflow-hidden">
-          <div className="flex justify-between items-start mb-4">
+        <div className="rounded-[16px] bg-white dark:bg-[#111C44] shadow-horizon border-l-[4px] border-purple-500 p-4 relative overflow-hidden">
+          <div className="flex justify-between items-start mb-3">
             <p className="text-[11px] font-bold text-gray-400 dark:text-gray-500 tracking-wider uppercase">With Photos</p>
             <div className="w-8 h-8 rounded-lg bg-purple-50 dark:bg-purple-900/30 flex items-center justify-center">
               <Camera className="w-4 h-4 text-purple-600 dark:text-purple-400" />
             </div>
           </div>
-          <h4 className="text-3xl font-extrabold text-navy dark:text-white mb-2">{stats.withPhotos}</h4>
-          <div className="text-xs font-medium text-gray-500 dark:text-gray-400">
+          <h4 className="text-3xl font-extrabold text-navy dark:text-white mb-1">{stats.withPhotos}</h4>
+          <div className="flex items-center text-xs font-medium">
             <span className="font-bold text-purple-600">
               {stats.total > 0 ? Math.round(stats.withPhotos / stats.total * 100) : 0}%
             </span> photo coverage rate
@@ -400,17 +400,17 @@ export default function SubmissionsClient({
         </div>
 
         {/* Card 4: Avg Net Price */}
-        <div className="rounded-[16px] bg-white dark:bg-[#111C44] shadow-horizon border-l-[4px] border-[#E41E26] p-5 relative overflow-hidden">
-          <div className="flex justify-between items-start mb-4">
+        <div className="rounded-[16px] bg-white dark:bg-[#111C44] shadow-horizon border-l-[4px] border-[#E41E26] p-4 relative overflow-hidden">
+          <div className="flex justify-between items-start mb-3">
             <p className="text-[11px] font-bold text-gray-400 dark:text-gray-500 tracking-wider uppercase">Avg Net Price</p>
             <div className="w-8 h-8 rounded-lg bg-red-50 dark:bg-red-900/30 flex items-center justify-center">
               <BarChart3 className="w-4 h-4 text-[#E41E26]" />
             </div>
           </div>
-          <h4 className="text-3xl font-extrabold text-navy dark:text-white mb-2">
+          <h4 className="text-3xl font-extrabold text-navy dark:text-white mb-1">
             {stats.avgPrice > 0 ? `$${stats.avgPrice.toFixed(2)}` : '—'}
           </h4>
-          <div className="text-xs font-medium text-gray-500 dark:text-gray-400">
+          <div className="flex items-center text-xs font-medium">
             {stats.withNotes > 0 && (
               <span className="text-amber-600 font-bold flex items-center gap-1">
                 <StickyNote className="w-3 h-3" /> {stats.withNotes} record{stats.withNotes > 1 ? 's' : ''} have notes
