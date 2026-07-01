@@ -27,9 +27,14 @@ export default function Header({ sidebarOpen, setSidebarOpen }: HeaderProps) {
   const supabase = createClient();
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      setUser(data.user);
-    });
+    const fetchUser = () => {
+      supabase.auth.getUser().then(({ data }) => {
+        setUser(data.user);
+      });
+    };
+    fetchUser();
+    window.addEventListener('profile-updated', fetchUser);
+    return () => window.removeEventListener('profile-updated', fetchUser);
   }, [supabase]);
 
   const handleLogout = async () => {

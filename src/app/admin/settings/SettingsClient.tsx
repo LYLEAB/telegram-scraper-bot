@@ -75,6 +75,7 @@ export default function SettingsClient() {
     setIsSaving(false);
     if (!error) {
       showSuccess('Profile updated successfully!');
+      window.dispatchEvent(new CustomEvent('profile-updated'));
     } else {
       alert(error.message);
     }
