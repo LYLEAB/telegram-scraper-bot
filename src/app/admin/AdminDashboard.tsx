@@ -368,6 +368,20 @@ export default function AdminDashboard({
     }));
   }, [filteredSubmissions]);
   
+  // Chart Data: Submissions by NCP vs ORD
+  const ncpOrdPieData = useMemo(() => {
+    const counts: Record<string, number> = { NCP: 0, ORD: 0 };
+    filteredSubmissions.forEach(s => {
+      const source = formatPriceSource(s.price_source_label);
+      if (source === 'NCP') counts['NCP']++;
+      else if (source === 'ORD') counts['ORD']++;
+    });
+    return [
+      { name: 'NCP', value: counts['NCP'] },
+      { name: 'ORD', value: counts['ORD'] }
+    ].filter(item => item.value > 0);
+  }, [filteredSubmissions]);
+
   const PIE_COLORS = ['#E41E26', '#00B5D8', '#FFB547', '#4318FF', '#05CD99'];
 
   const stableChannels = useMemo(() => {
@@ -677,15 +691,28 @@ export default function AdminDashboard({
           </div>
           <div className="h-[250px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart 
-                data={weeklyPriceSourceData} 
-                margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#A3AED0' }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#A3AED0' }} />
+              <PieChart>
+                <Pie
+                  data={ncpOrdPieData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={80}
+                  paddingAngle={5}
+                  dataKey="value"
+                  stroke="none"
+                  onClick={(data) => { if (data && data.name) setPriceSourceFilter(prev => prev === data.name ? '' : data.name); }}
+                  className="cursor-pointer outline-none"
+                >
+                  {ncpOrdPieData.map((entry, index) => (
+                    <Cell 
+                      key={`cell-${index}`} 
+                      fill={getPriceSourceColor(entry.name)} 
+                      className="hover:opacity-80 transition-opacity"
+                    />
+                  ))}
+                </Pie>
                 <Tooltip 
-                  cursor={{ fill: '#F4F7FE' }}
                   contentStyle={{ backgroundColor: '#fff', borderRadius: '12px', border: 'none', boxShadow: '0px 18px 40px rgba(112,144,176,0.12)' }}
                   itemStyle={{ color: '#2B3674', fontWeight: 600 }}
                   labelStyle={{ color: '#A3AED0', fontWeight: 500 }}
@@ -694,23 +721,10 @@ export default function AdminDashboard({
                   verticalAlign="bottom" 
                   height={36} 
                   iconType="circle"
-                  wrapperStyle={{ fontSize: '12px', fontWeight: '500', color: '#2B3674' }}
+                  wrapperStyle={{ fontSize: '12px', fontWeight: '500', color: '#2B3674', cursor: 'pointer' }}
+                  onClick={(e: any) => { if (e && e.value) setPriceSourceFilter(prev => prev === e.value ? '' : e.value); }}
                 />
-                <Bar 
-                  dataKey="ncp" 
-                  name="NCP"
-                  stackId="a"
-                  fill={getPriceSourceColor('NCP')} 
-                  radius={[0, 0, 4, 4]}
-                />
-                <Bar 
-                  dataKey="ord" 
-                  name="ORD"
-                  stackId="a"
-                  fill={getPriceSourceColor('ORD')} 
-                  radius={[4, 4, 0, 0]}
-                />
-              </BarChart>
+              </PieChart>
             </ResponsiveContainer>
           </div>
         </div>
