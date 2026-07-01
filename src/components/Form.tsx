@@ -151,7 +151,14 @@ export default function Form({ options }: { options: any }) {
       });
 
       if (!res.ok) {
-        throw new Error('Failed to submit');
+        const errData = await res.json().catch(() => ({}));
+        let errMsg = 'Failed to submit';
+        if (errData.details && errData.details.details) {
+            errMsg = errData.details.details;
+        } else if (errData.error) {
+            errMsg = errData.error;
+        }
+        throw new Error(errMsg);
       }
 
       setSuccessMessage("Pricing data has been submitted and sent to Telegram.");
