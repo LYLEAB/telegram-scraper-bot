@@ -199,7 +199,7 @@ export default function UsersClient({
           </div>
           {stats.topUser ? (
             <>
-              <h4 className="text-xl font-extrabold text-navy dark:text-white mb-1 truncate">{stats.topUser.name}</h4>
+              <h4 className="text-3xl font-extrabold text-navy dark:text-white mb-1 truncate">{stats.topUser.name}</h4>
               <div className="flex items-center text-xs font-medium text-gray-500 dark:text-gray-400">
                 <span className="text-amber-600 font-bold">{stats.topUser.totalSubmissions}</span> &nbsp;submissions
               </div>
