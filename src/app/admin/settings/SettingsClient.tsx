@@ -294,9 +294,9 @@ export default function SettingsClient() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-bold text-navy dark:text-white mb-2">{translate('language')}</label>
-                    <select value={language} onChange={e => setLanguage(e.target.value)} className="w-full rounded-xl bg-[#F4F7FE] dark:bg-[#0B1437] py-3 px-4 text-sm font-bold text-navy dark:text-white outline-none focus:ring-2 focus:ring-[#E41E26]/50 cursor-pointer appearance-none">
+                    <select value={langPreference} onChange={e => setLangPreference(e.target.value)} className="w-full rounded-xl bg-[#F4F7FE] dark:bg-[#0B1437] py-3 px-4 text-sm font-bold text-navy dark:text-white outline-none focus:ring-2 focus:ring-[#E41E26]/50 cursor-pointer appearance-none">
                       <option value="English">English</option>
-                      <option value="Khmer">Khmer</option>
+                      <option value="Khmer">ខ្មែរ (Khmer)</option>
                     </select>
                   </div>
                   <div>
