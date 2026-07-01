@@ -153,8 +153,8 @@ export default function Form({ options }: { options: any }) {
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
         let errMsg = 'Failed to submit';
-        if (errData.details) {
-            errMsg = typeof errData.details === 'string' ? errData.details : JSON.stringify(errData.details);
+        if (errData.details && errData.details.message) {
+            errMsg = errData.details.message;
         } else if (errData.error) {
             errMsg = errData.error;
         }
