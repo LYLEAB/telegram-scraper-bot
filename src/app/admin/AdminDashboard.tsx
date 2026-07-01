@@ -677,7 +677,7 @@ export default function AdminDashboard({
           </div>
           <div className="h-[250px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart 
+              <BarChart 
                 data={weeklyPriceSourceData} 
                 margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
               >
@@ -685,7 +685,7 @@ export default function AdminDashboard({
                 <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#A3AED0' }} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#A3AED0' }} />
                 <Tooltip 
-                  cursor={{ stroke: '#A3AED0', strokeWidth: 1, strokeDasharray: '3 3' }}
+                  cursor={{ fill: '#F4F7FE' }}
                   contentStyle={{ backgroundColor: '#fff', borderRadius: '12px', border: 'none', boxShadow: '0px 18px 40px rgba(112,144,176,0.12)' }}
                   itemStyle={{ color: '#2B3674', fontWeight: 600 }}
                   labelStyle={{ color: '#A3AED0', fontWeight: 500 }}
@@ -696,23 +696,21 @@ export default function AdminDashboard({
                   iconType="circle"
                   wrapperStyle={{ fontSize: '12px', fontWeight: '500', color: '#2B3674' }}
                 />
-                <Line 
-                  type="monotone" 
+                <Bar 
                   dataKey="ncp" 
                   name="NCP"
-                  stroke={getPriceSourceColor('NCP')} 
-                  strokeWidth={3}
-                  dot={{ r: 3, fill: getPriceSourceColor('NCP'), strokeWidth: 2, stroke: '#fff' }}
+                  stackId="a"
+                  fill={getPriceSourceColor('NCP')} 
+                  radius={[0, 0, 4, 4]}
                 />
-                <Line 
-                  type="monotone" 
+                <Bar 
                   dataKey="ord" 
                   name="ORD"
-                  stroke={getPriceSourceColor('ORD')} 
-                  strokeWidth={3}
-                  dot={{ r: 3, fill: getPriceSourceColor('ORD'), strokeWidth: 2, stroke: '#fff' }}
+                  stackId="a"
+                  fill={getPriceSourceColor('ORD')} 
+                  radius={[4, 4, 0, 0]}
                 />
-              </LineChart>
+              </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
