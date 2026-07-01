@@ -120,18 +120,6 @@ export default function Form({ options }: { options: any }) {
   const handleSubmit = async (e: any) => {
     e.preventDefault();
 
-    if (!formData.submitted_by) {
-      setErrorMessage("Please enter the 'Submitted by' field before submitting.");
-      setErrorModal(true);
-      return;
-    }
-
-    if (!formData.type_select_code) {
-      setErrorMessage("Please select a Product Type before submitting.");
-      setErrorModal(true);
-      return;
-    }
-
     if (!formData.brand_code) {
       setErrorMessage("Please select a Brand before submitting.");
       setErrorModal(true);
