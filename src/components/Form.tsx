@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { MapPin, User, Tag, DollarSign, Target, Send, Navigation, Store, Boxes, LayoutGrid, Info, Check, Camera, WifiOff, RefreshCw, XCircle } from 'lucide-react';
+import { MapPin, User, Tag, DollarSign, Target, Send, Navigation, Store, Boxes, LayoutGrid, Info, Check, Camera, WifiOff, RefreshCw, XCircle, Trash2 } from 'lucide-react';
 import SearchableSelect from './SearchableSelect';
 import imageCompression from 'browser-image-compression';
 import dynamic from 'next/dynamic';
@@ -265,9 +265,15 @@ export default function Form({ options }: { options: any }) {
     ? options.districts.filter((d: any) => d.province_code === formData.province_code)
     : [];
 
-  // Channel Logic
   const selectedChannel = options.channels.find((c: any) => c.code === formData.channel_code);
   const isOffTrade = selectedChannel && selectedChannel.label.toLowerCase().includes('off-trade');
+
+  const clearOfflineQueue = () => {
+    if (confirm("Are you sure you want to delete these stuck offline submissions? This cannot be undone.")) {
+      setOfflineQueue([]);
+      localStorage.removeItem('offlineSubmissions');
+    }
+  };
 
   return (
     <>
@@ -283,15 +289,25 @@ export default function Form({ options }: { options: any }) {
               <p className="text-sm opacity-80">You have {offlineQueue.length} submission(s) waiting to be uploaded.</p>
             </div>
           </div>
-          <button 
-            type="button"
-            onClick={syncOfflineSubmissions}
-            disabled={syncing}
-            className="w-full sm:w-auto flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg font-medium transition-colors"
-          >
-            <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
-            {syncing ? 'Syncing...' : 'Sync Now'}
-          </button>
+          <div className="flex w-full sm:w-auto gap-2">
+            <button 
+              type="button"
+              onClick={clearOfflineQueue}
+              className="flex items-center justify-center p-2 text-orange-700 bg-orange-100 hover:bg-orange-200 rounded-lg transition-colors"
+              title="Delete offline submissions"
+            >
+              <Trash2 className="w-5 h-5" />
+            </button>
+            <button 
+              type="button"
+              onClick={syncOfflineSubmissions}
+              disabled={syncing}
+              className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg font-medium transition-colors"
+            >
+              <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
+              {syncing ? 'Syncing...' : 'Sync Now'}
+            </button>
+          </div>
         </div>
       )}
 
