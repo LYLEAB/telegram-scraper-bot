@@ -496,7 +496,6 @@ export default function Form({ options }: { options: any }) {
                   type="file" 
                   accept="image/*" 
                   multiple
-                  capture="environment" 
                   onChange={handlePhotoChange} 
                   className="hidden" 
                 />
