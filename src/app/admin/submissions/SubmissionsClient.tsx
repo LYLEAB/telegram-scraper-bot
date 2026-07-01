@@ -354,7 +354,7 @@ export default function SubmissionsClient({
             </div>
           </div>
           <h4 className="text-3xl font-extrabold text-navy dark:text-white mb-1">{stats.total.toLocaleString()}</h4>
-          <div className="flex items-center text-xs font-medium">
+          <div className="flex items-center text-xs font-medium text-gray-500 dark:text-gray-400">
             {activeFilterCount > 0
               ? <span className="text-blue-600 font-bold">{activeFilterCount} filter{activeFilterCount > 1 ? 's' : ''} active</span>
               : <span>All submissions in database</span>
@@ -371,7 +371,7 @@ export default function SubmissionsClient({
             </div>
           </div>
           <h4 className="text-3xl font-extrabold text-navy dark:text-white mb-1">{stats.todayCount}</h4>
-          <div className="flex items-center text-xs font-medium">
+          <div className="flex items-center text-xs font-medium text-gray-500 dark:text-gray-400">
             {stats.todayGrowth !== null ? (
               <span className={`font-bold flex items-center gap-1 ${Number(stats.todayGrowth) >= 0 ? 'text-green-600' : 'text-red-500'}`}>
                 {Number(stats.todayGrowth) >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
@@ -392,10 +392,10 @@ export default function SubmissionsClient({
             </div>
           </div>
           <h4 className="text-3xl font-extrabold text-navy dark:text-white mb-1">{stats.withPhotos}</h4>
-          <div className="flex items-center text-xs font-medium">
+          <div className="flex items-center text-xs font-medium text-gray-500 dark:text-gray-400">
             <span className="font-bold text-purple-600">
               {stats.total > 0 ? Math.round(stats.withPhotos / stats.total * 100) : 0}%
-            </span> photo coverage rate
+            </span> &nbsp;photo coverage rate
           </div>
         </div>
 
@@ -410,7 +410,7 @@ export default function SubmissionsClient({
           <h4 className="text-3xl font-extrabold text-navy dark:text-white mb-1">
             {stats.avgPrice > 0 ? `$${stats.avgPrice.toFixed(2)}` : '—'}
           </h4>
-          <div className="flex items-center text-xs font-medium">
+          <div className="flex items-center text-xs font-medium text-gray-500 dark:text-gray-400">
             {stats.withNotes > 0 && (
               <span className="text-amber-600 font-bold flex items-center gap-1">
                 <StickyNote className="w-3 h-3" /> {stats.withNotes} record{stats.withNotes > 1 ? 's' : ''} have notes

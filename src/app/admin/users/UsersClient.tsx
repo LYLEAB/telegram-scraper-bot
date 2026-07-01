@@ -158,38 +158,40 @@ export default function UsersClient({
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <div className="rounded-[16px] bg-white dark:bg-[#111C44] shadow-horizon border-l-[4px] border-blue-600 p-5">
-          <div className="flex justify-between items-start mb-4">
+        <div className="rounded-[16px] bg-white dark:bg-[#111C44] shadow-horizon border-l-[4px] border-blue-600 p-4 relative overflow-hidden">
+          <div className="flex justify-between items-start mb-3">
             <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Total Users</p>
             <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center">
               <Users className="w-4 h-4 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
-          <h4 className="text-3xl font-extrabold text-navy dark:text-white mb-2">{stats.total}</h4>
-          <p className="text-xs font-medium text-gray-500">Avg <span className="text-blue-600 font-bold">{stats.avgPerUser}</span> submissions each</p>
+          <h4 className="text-3xl font-extrabold text-navy dark:text-white mb-1">{stats.total}</h4>
+          <div className="flex items-center text-xs font-medium text-gray-500 dark:text-gray-400">
+            Avg &nbsp;<span className="text-blue-600 font-bold">{stats.avgPerUser}</span>&nbsp; submissions each
+          </div>
         </div>
 
-        <div className="rounded-[16px] bg-white dark:bg-[#111C44] shadow-horizon border-l-[4px] border-green-500 p-5">
-          <div className="flex justify-between items-start mb-4">
+        <div className="rounded-[16px] bg-white dark:bg-[#111C44] shadow-horizon border-l-[4px] border-green-500 p-4 relative overflow-hidden">
+          <div className="flex justify-between items-start mb-3">
             <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Active Today</p>
             <div className="w-8 h-8 rounded-lg bg-green-50 dark:bg-green-900/30 flex items-center justify-center">
               <Activity className="w-4 h-4 text-green-600 dark:text-green-400" />
             </div>
           </div>
-          <h4 className="text-3xl font-extrabold text-navy dark:text-white mb-2">{stats.activeToday}</h4>
-          <div className="text-xs font-medium">
+          <h4 className="text-3xl font-extrabold text-navy dark:text-white mb-1">{stats.activeToday}</h4>
+          <div className="flex items-center text-xs font-medium text-gray-500 dark:text-gray-400">
             {stats.activeToday > stats.activeYest ? (
               <span className="text-green-600 font-bold flex items-center gap-1"><TrendingUp className="w-3 h-3" /> +{stats.activeToday - stats.activeYest} vs yesterday</span>
             ) : stats.activeToday < stats.activeYest ? (
               <span className="text-red-500 font-bold flex items-center gap-1"><TrendingDown className="w-3 h-3" /> {stats.activeToday - stats.activeYest} vs yesterday</span>
             ) : (
-              <span className="text-gray-400">{stats.activeYest} active yesterday</span>
+              <span>{stats.activeYest} active yesterday</span>
             )}
           </div>
         </div>
 
-        <div className="rounded-[16px] bg-white dark:bg-[#111C44] shadow-horizon border-l-[4px] border-amber-500 p-5">
-          <div className="flex justify-between items-start mb-4">
+        <div className="rounded-[16px] bg-white dark:bg-[#111C44] shadow-horizon border-l-[4px] border-amber-500 p-4 relative overflow-hidden">
+          <div className="flex justify-between items-start mb-3">
             <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Top Submitter</p>
             <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center">
               <Award className="w-4 h-4 text-amber-500" />
@@ -198,20 +200,22 @@ export default function UsersClient({
           {stats.topUser ? (
             <>
               <h4 className="text-xl font-extrabold text-navy dark:text-white mb-1 truncate">{stats.topUser.name}</h4>
-              <p className="text-xs font-medium text-amber-600 font-bold">{stats.topUser.totalSubmissions} submissions</p>
+              <div className="flex items-center text-xs font-medium text-gray-500 dark:text-gray-400">
+                <span className="text-amber-600 font-bold">{stats.topUser.totalSubmissions}</span> &nbsp;submissions
+              </div>
             </>
           ) : <h4 className="text-2xl font-extrabold text-gray-300">—</h4>}
         </div>
 
-        <div className="rounded-[16px] bg-white dark:bg-[#111C44] shadow-horizon border-l-[4px] border-[#E41E26] p-5">
-          <div className="flex justify-between items-start mb-4">
+        <div className="rounded-[16px] bg-white dark:bg-[#111C44] shadow-horizon border-l-[4px] border-[#E41E26] p-4 relative overflow-hidden">
+          <div className="flex justify-between items-start mb-3">
             <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Total Submissions</p>
             <div className="w-8 h-8 rounded-lg bg-red-50 dark:bg-red-900/30 flex items-center justify-center">
               <BarChart3 className="w-4 h-4 text-[#E41E26]" />
             </div>
           </div>
-          <h4 className="text-3xl font-extrabold text-navy dark:text-white mb-2">{stats.totalSubmissions.toLocaleString()}</h4>
-          <p className="text-xs font-medium text-gray-500">Across all users</p>
+          <h4 className="text-3xl font-extrabold text-navy dark:text-white mb-1">{stats.totalSubmissions.toLocaleString()}</h4>
+          <div className="flex items-center text-xs font-medium text-gray-500 dark:text-gray-400">Across all users</div>
         </div>
       </div>
 
