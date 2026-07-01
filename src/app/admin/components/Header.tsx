@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 import SubmissionDetailsModal from '../SubmissionDetailsModal';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface HeaderProps {
   sidebarOpen: boolean;
@@ -15,6 +16,7 @@ interface HeaderProps {
 
 export default function Header({ sidebarOpen, setSidebarOpen }: HeaderProps) {
   const { theme, setTheme } = useTheme();
+  const { translate } = useLanguage();
   const [mounted, setMounted] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
@@ -158,10 +160,10 @@ export default function Header({ sidebarOpen, setSidebarOpen }: HeaderProps) {
   };
 
   const pathname = usePathname();
-  const pageTitle = pathname.includes('/submissions') ? 'Submissions'
-    : pathname.includes('/users') ? 'Users'
-    : pathname.includes('/settings') ? 'Settings'
-    : 'Main Dashboard';
+  const pageTitle = pathname.includes('/submissions') ? translate('submissions')
+    : pathname.includes('/users') ? translate('users')
+    : pathname.includes('/settings') ? translate('settings')
+    : translate('dashboard');
 
   return (
     <>
@@ -181,7 +183,7 @@ export default function Header({ sidebarOpen, setSidebarOpen }: HeaderProps) {
         
         <div className="flex flex-col justify-center">
           <div className="text-[13px] font-medium text-[#A3AED0] mb-1">
-            Pages / {pageTitle}
+            {translate('pages')} / {pageTitle}
           </div>
           <h1 className="text-[32px] leading-tight font-extrabold text-navy dark:text-white">
             {pageTitle}
@@ -196,7 +198,7 @@ export default function Header({ sidebarOpen, setSidebarOpen }: HeaderProps) {
           <Search className="w-4 h-4 text-horizon-secondary" />
           <input 
             type="text" 
-            placeholder="Search..." 
+            placeholder={translate('search')} 
             value={searchQuery}
             onChange={handleSearchChange}
             className="bg-transparent border-none outline-none text-sm font-medium text-navy dark:text-white ml-2 w-24 sm:w-32 xl:w-48 placeholder:text-[#A3AED0]" 
@@ -222,9 +224,9 @@ export default function Header({ sidebarOpen, setSidebarOpen }: HeaderProps) {
               {/* Header */}
               <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-800">
                 <div className="flex items-center gap-2">
-                  <h3 className="font-bold text-navy dark:text-white">Notifications</h3>
+                  <h3 className="font-bold text-navy dark:text-white">{translate('notifications')}</h3>
                   {unreadCount > 0 && (
-                    <span className="bg-[#E41E26] text-white text-[10px] font-bold px-2 py-0.5 rounded-full">{unreadCount} new</span>
+                    <span className="bg-[#E41E26] text-white text-[10px] font-bold px-2 py-0.5 rounded-full">{unreadCount} {translate('new')}</span>
                   )}
                 </div>
                 <div className="flex items-center gap-3">
@@ -232,7 +234,7 @@ export default function Header({ sidebarOpen, setSidebarOpen }: HeaderProps) {
                     <svg className={`w-3.5 h-3.5 ${notifLoading ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
                   </button>
                   {unreadCount > 0 && (
-                    <button onClick={markAllRead} className="text-xs text-[#E41E26] font-bold hover:underline">Mark all read</button>
+                    <button onClick={markAllRead} className="text-xs text-[#E41E26] font-bold hover:underline">{translate('markAllRead')}</button>
                   )}
                 </div>
               </div>
@@ -242,13 +244,13 @@ export default function Header({ sidebarOpen, setSidebarOpen }: HeaderProps) {
                 {notifLoading && notifications.length === 0 ? (
                   <div className="py-10 flex flex-col items-center gap-2">
                     <div className="w-6 h-6 border-2 border-[#E41E26] border-t-transparent rounded-full animate-spin" />
-                    <p className="text-xs text-gray-400 font-medium">Loading...</p>
+                    <p className="text-xs text-gray-400 font-medium">{translate('loading')}</p>
                   </div>
                 ) : notifications.length === 0 ? (
                   <div className="py-10 flex flex-col items-center gap-2">
                     <Bell className="w-8 h-8 text-gray-200 dark:text-gray-700" />
-                    <p className="text-sm text-gray-400 font-semibold">No notifications</p>
-                    <p className="text-xs text-gray-300 dark:text-gray-600">New submissions will appear here</p>
+                    <p className="text-sm text-gray-400 font-semibold">{translate('noNotifications')}</p>
+                    <p className="text-xs text-gray-300 dark:text-gray-600">{translate('newSubmissionsAppearHere')}</p>
                   </div>
                 ) : (
                   notifications.map(notif => (
@@ -284,7 +286,7 @@ export default function Header({ sidebarOpen, setSidebarOpen }: HeaderProps) {
               {/* Footer */}
               {notifications.length > 0 && (
                 <div className="px-5 py-3 border-t border-gray-100 dark:border-gray-800 text-center">
-                  <p className="text-xs text-gray-400">Showing last {notifications.length} submissions</p>
+                  <p className="text-xs text-gray-400">{translate('showingLast')} {notifications.length} {translate('submissions')}</p>
                 </div>
               )}
             </div>
@@ -321,20 +323,20 @@ export default function Header({ sidebarOpen, setSidebarOpen }: HeaderProps) {
           {showProfile && (
             <div className="absolute right-0 mt-4 w-56 rounded-2xl bg-white dark:bg-[#111C44] p-2 shadow-xl border border-gray-100 dark:border-gray-800">
               <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800 mb-1">
-                <p className="text-sm font-bold text-navy dark:text-white line-clamp-1">{user?.user_metadata?.full_name || 'Admin Profile'}</p>
+                <p className="text-sm font-bold text-navy dark:text-white line-clamp-1">{user?.user_metadata?.full_name || translate('adminProfile')}</p>
                 <p className="text-xs text-[#A3AED0] line-clamp-1">{user?.email || 'admin@khmerbeverages.com'}</p>
               </div>
               <button 
                 onClick={() => { router.push('/admin/settings'); setShowProfile(false); }}
                 className="w-full flex items-center gap-2 px-4 py-2 text-sm font-medium text-navy dark:text-white hover:bg-[#F4F7FE] dark:hover:bg-[#0B1437] rounded-lg transition"
               >
-                <Settings className="w-4 h-4" /> Profile Settings
+                <Settings className="w-4 h-4" /> {translate('profileSettings')}
               </button>
               <button 
                 onClick={handleLogout}
                 className="w-full flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition mt-1"
               >
-                <LogOut className="w-4 h-4" /> Log Out
+                <LogOut className="w-4 h-4" /> {translate('logOut')}
               </button>
             </div>
           )}

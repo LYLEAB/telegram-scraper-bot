@@ -3,9 +3,9 @@
 import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { 
-  MapPin, Image as ImageIcon,
   Map as MapIcon, Activity, Package, UserCircle, Info,
-  Users, MapPin as MapPinIcon, Tag, ArrowRight
+  Users, MapPin as MapPinIcon, Tag, ArrowRight,
+  ListFilter, Maximize2, ExternalLink, Calendar, Search, MapPin, X, Trash2, Camera, Download, FileText, Image as ImageIcon
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import PhotoModal from './PhotoModal';
@@ -15,6 +15,7 @@ import {
   LineChart, Line, PieChart, Pie, Cell, Legend
 } from 'recharts';
 import dynamic from 'next/dynamic';
+import { useLanguage } from '@/context/LanguageContext';
 
 const AdminMap = dynamic(() => import('./AdminMap'), { 
   ssr: false,
@@ -60,6 +61,7 @@ export default function AdminDashboard({
   brands: any[],
   provinces: any[]
 }) {
+  const { translate } = useLanguage();
   const [submissions, setSubmissions] = useState(initialSubmissions);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   
@@ -502,7 +504,7 @@ export default function AdminDashboard({
         {/* Card 1: Total Submissions (Blue) */}
         <div className="rounded-[16px] bg-white dark:bg-[#111C44] shadow-horizon border-l-[4px] border-blue-600 p-4 relative overflow-hidden">
           <div className="flex justify-between items-start mb-3">
-            <p className="text-[11px] font-bold text-gray-400 dark:text-gray-500 tracking-wider uppercase">Total Submissions</p>
+            <p className="text-[11px] font-bold text-gray-400 dark:text-gray-500 tracking-wider uppercase">{translate('totalSubmissions')}</p>
             <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center">
               <Activity className="w-4 h-4 text-blue-600 dark:text-blue-400" />
             </div>
@@ -511,14 +513,14 @@ export default function AdminDashboard({
             {metrics.total.toLocaleString()}
           </h4>
           <div className="flex items-center text-xs font-medium">
-            <span className="text-gray-500 dark:text-gray-400">Across <span className="font-bold text-navy dark:text-white">{metrics.totalProvinces}</span> active provinces</span>
+            <span className="text-gray-500 dark:text-gray-400">{translate('acrossActiveProvinces')} <span className="font-bold text-navy dark:text-white">{metrics.totalProvinces}</span></span>
           </div>
         </div>
 
         {/* Card 2: Submitted Today (Green) */}
         <div className="rounded-[16px] bg-white dark:bg-[#111C44] shadow-horizon border-l-[4px] border-teal-500 p-4 relative overflow-hidden">
           <div className="flex justify-between items-start mb-3">
-            <p className="text-[11px] font-bold text-gray-400 dark:text-gray-500 tracking-wider uppercase">Submitted Today</p>
+            <p className="text-[11px] font-bold text-gray-400 dark:text-gray-500 tracking-wider uppercase">{translate('submittedToday')}</p>
             <div className="w-8 h-8 rounded-lg bg-teal-50 dark:bg-teal-900/30 flex items-center justify-center">
               <Package className="w-4 h-4 text-teal-600 dark:text-teal-400" />
             </div>
@@ -530,7 +532,7 @@ export default function AdminDashboard({
             <span className={metrics.todayTrendValue >= 0 ? "text-green-500 font-bold" : "text-red-500 font-bold"}>
               {metrics.todayTrend}
             </span>
-            <span className="text-gray-500 dark:text-gray-400 ml-1">from yesterday</span>
+            <span className="text-gray-500 dark:text-gray-400 ml-1">{translate('vsYesterday')}</span>
           </div>
         </div>
 

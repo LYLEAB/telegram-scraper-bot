@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
+import { LanguageProvider } from '@/context/LanguageContext';
 
 export default function AdminLayout({
   children,
@@ -12,8 +13,9 @@ export default function AdminLayout({
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className=" ">
-      {/* Page Wrapper Start */}
+    <LanguageProvider>
+      <div className=" ">
+        {/* Page Wrapper Start */}
       <div className="flex h-screen overflow-hidden">
         {/* Sidebar Start */}
         <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
@@ -36,6 +38,7 @@ export default function AdminLayout({
         {/* Content Area End */}
       </div>
       {/* Page Wrapper End */}
-    </div>
+      </div>
+    </LanguageProvider>
   );
 }

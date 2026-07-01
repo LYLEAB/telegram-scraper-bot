@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { LayoutDashboard, Users, Settings, LogOut, FileText, ChevronLeft, ArrowLeft, Send } from 'lucide-react';
 import Image from 'next/image';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface SidebarProps {
   sidebarOpen: boolean;
@@ -12,25 +13,26 @@ interface SidebarProps {
 
 export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
   const pathname = usePathname();
+  const { translate } = useLanguage();
 
   const menuItems = [
     {
-      title: 'Dashboard',
+      title: translate('dashboard'),
       icon: <LayoutDashboard className="w-5 h-5" />,
       path: '/admin',
     },
     {
-      title: 'Submissions',
+      title: translate('submissions'),
       icon: <FileText className="w-5 h-5" />,
       path: '/admin/submissions',
     },
     {
-      title: 'Users',
+      title: translate('users'),
       icon: <Users className="w-5 h-5" />,
       path: '/admin/users',
     },
     {
-      title: 'Settings',
+      title: translate('settings'),
       icon: <Settings className="w-5 h-5" />,
       path: '/admin/settings',
     }
@@ -70,7 +72,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
       <div className="no-scrollbar flex flex-col overflow-y-auto duration-300 ease-linear">
         <nav className="mt-5 py-4 px-4 lg:mt-9 lg:px-6">
           <div>
-            <h3 className="mb-4 ml-4 text-sm font-bold text-navy dark:text-white">MENU</h3>
+            <h3 className="mb-4 ml-4 text-sm font-bold text-navy dark:text-white">{translate('menu')}</h3>
             <ul className="mb-6 flex flex-col gap-1.5">
               {menuItems.map((item, index) => {
                 const isActive = pathname === item.path;
