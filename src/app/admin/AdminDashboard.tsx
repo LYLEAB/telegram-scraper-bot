@@ -539,7 +539,7 @@ export default function AdminDashboard({
         {/* Card 3: Total Submitters (Orange) */}
         <div className="rounded-[16px] bg-white dark:bg-[#111C44] shadow-horizon border-l-[4px] border-orange-500 p-4 relative overflow-hidden">
           <div className="flex justify-between items-start mb-3">
-            <p className="text-[11px] font-bold text-gray-400 dark:text-gray-500 tracking-wider uppercase">Total Submitters</p>
+            <p className="text-[11px] font-bold text-gray-400 dark:text-gray-500 tracking-wider uppercase">{translate('totalSubmitters')}</p>
             <div className="w-8 h-8 rounded-lg bg-orange-50 dark:bg-orange-900/30 flex items-center justify-center">
               <Users className="w-4 h-4 text-orange-600 dark:text-orange-400" />
             </div>
@@ -549,14 +549,14 @@ export default function AdminDashboard({
           </h4>
           <div className="flex items-center text-xs font-medium">
             <span className="text-green-500 font-bold">+{metrics.activeSubmittersToday}</span>
-            <span className="text-gray-500 dark:text-gray-400 ml-1">active users today</span>
+            <span className="text-gray-500 dark:text-gray-400 ml-1">{translate('activeUsersToday')}</span>
           </div>
         </div>
 
         {/* Card 4: Top Tracked Brand (Red) */}
         <div className="rounded-[16px] bg-white dark:bg-[#111C44] shadow-horizon border-l-[4px] border-[#E41E26] p-4 relative overflow-hidden">
           <div className="flex justify-between items-start mb-3">
-            <p className="text-[11px] font-bold text-gray-400 dark:text-gray-500 tracking-wider uppercase">Top Brand</p>
+            <p className="text-[11px] font-bold text-gray-400 dark:text-gray-500 tracking-wider uppercase">{translate('topBrand')}</p>
             <div className="w-8 h-8 rounded-lg bg-red-50 dark:bg-red-900/30 flex items-center justify-center">
               <Tag className="w-4 h-4 text-[#E41E26]" />
             </div>
@@ -566,7 +566,7 @@ export default function AdminDashboard({
           </h4>
           <div className="flex items-center text-xs font-medium">
             <span className="text-red-500 font-bold">{metrics.topBrandPercent}%</span>
-            <span className="text-gray-500 dark:text-gray-400 ml-1">of all tracking</span>
+            <span className="text-gray-500 dark:text-gray-400 ml-1">{translate('ofAllTracking')}</span>
           </div>
         </div>
       </div>
@@ -578,8 +578,8 @@ export default function AdminDashboard({
         <div className="rounded-[20px] bg-white dark:bg-[#111C44] p-6 shadow-horizon lg:col-span-2">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <p className="text-sm font-medium text-horizon-secondary">This Week</p>
-              <h3 className="text-2xl font-bold text-navy dark:text-white">Submissions Trend</h3>
+              <p className="text-sm font-medium text-horizon-secondary">{translate('thisWeek')}</p>
+              <h3 className="text-2xl font-bold text-navy dark:text-white">{translate('submissionsTrend')}</h3>
             </div>
           </div>
           <div className="h-[250px] w-full">
@@ -620,7 +620,7 @@ export default function AdminDashboard({
         {/* Submissions by Channel Pie Chart (Takes 1 column) */}
         <div className="rounded-[20px] bg-white dark:bg-[#111C44] p-6 shadow-horizon">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold text-navy dark:text-white">By Channel</h3>
+            <h3 className="text-lg font-bold text-navy dark:text-white">{translate('byChannel')}</h3>
             {channelFilter && (
               <button 
                 onClick={() => setChannelFilter('')}
@@ -673,7 +673,7 @@ export default function AdminDashboard({
         {/* Submissions by Price Source Line Chart (Takes 1 column) */}
         <div className="rounded-[20px] bg-white dark:bg-[#111C44] p-6 shadow-horizon">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold text-navy dark:text-white">NCP/ORD Trend</h3>
+            <h3 className="text-lg font-bold text-navy dark:text-white">{translate('ncpOrdTrend')}</h3>
           </div>
           <div className="h-[250px] w-full">
             <ResponsiveContainer width="100%" height="100%">
@@ -724,7 +724,7 @@ export default function AdminDashboard({
         {/* Chart 1: Submissions by Province */}
         <div className="rounded-[20px] bg-white dark:bg-[#111C44] p-6 shadow-horizon">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold text-navy dark:text-white">Top Provinces by Activity</h3>
+            <h3 className="text-lg font-bold text-navy dark:text-white">{translate('topProvincesByActivity')}</h3>
             {provinceFilter && (
               <button 
                 onClick={() => setProvinceFilter('')}
@@ -762,7 +762,7 @@ export default function AdminDashboard({
         {/* Chart 2: Average Net Price by Brand */}
         <div className="rounded-[20px] bg-white dark:bg-[#111C44] p-6 shadow-horizon">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold text-navy dark:text-white">Avg Net Price by Brand ($)</h3>
+            <h3 className="text-lg font-bold text-navy dark:text-white">{translate('avgNetPriceByBrand')}</h3>
             {brandFilter && (
               <button 
                 onClick={() => setBrandFilter('')}
@@ -801,7 +801,7 @@ export default function AdminDashboard({
         {/* Chart 3: Top Schemes */}
         <div className="rounded-[20px] bg-white dark:bg-[#111C44] p-6 shadow-horizon">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold text-navy dark:text-white">Top Schemes</h3>
+            <h3 className="text-lg font-bold text-navy dark:text-white">{translate('topSchemes')}</h3>
             {schemeFilter && (
               <button 
                 onClick={() => setSchemeFilter('')}

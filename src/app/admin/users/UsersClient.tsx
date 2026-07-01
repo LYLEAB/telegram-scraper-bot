@@ -1,13 +1,9 @@
 "use client";
 
 import { useState, useMemo } from 'react';
-import {
-  Users, Search, TrendingUp, TrendingDown, Camera, StickyNote,
-  MapPin, Tag, Activity, BarChart3, ChevronDown, ChevronUp,
-  ChevronsUpDown, X, Star, Award, Clock, CalendarDays,
-  FileSpreadsheet, Globe, LayoutGrid, List, Calendar, Download, CheckCircle2, ChevronRight, Trophy, Medal
-} from 'lucide-react';
+import { BarChart3, TrendingUp, TrendingDown, Users, Search, X, Medal, LayoutGrid, List, Activity, Award, Camera, FileSpreadsheet, Trophy, ChevronDown, ChevronUp, ChevronsUpDown, MapPin, Tag, StickyNote, Calendar, Clock, CalendarDays, Globe, CheckCircle2, ChevronRight } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import { useLanguage } from '@/context/LanguageContext';
 import SubmissionDetailsModal from './../SubmissionDetailsModal';
 
 type User = {
@@ -54,7 +50,7 @@ const timeAgo = (str: string | null) => {
 };
 
 export default function UsersClient({
-  users,
+  users: initialUsers,
   submissions,
   provinces,
   brands,
@@ -64,6 +60,8 @@ export default function UsersClient({
   provinces: any[];
   brands: any[];
 }) {
+  const { translate } = useLanguage();
+  const [users, setUsers] = useState<any[]>(initialUsers);
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('total');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
@@ -160,20 +158,20 @@ export default function UsersClient({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         <div className="rounded-[16px] bg-white dark:bg-[#111C44] shadow-horizon border-l-[4px] border-blue-600 p-4 relative overflow-hidden">
           <div className="flex justify-between items-start mb-3">
-            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Total Users</p>
+            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">{translate('totalUsers')}</p>
             <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center">
               <Users className="w-4 h-4 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
           <h4 className="text-3xl font-extrabold text-navy dark:text-white mb-1">{stats.total}</h4>
           <div className="flex items-center text-xs font-medium text-gray-500 dark:text-gray-400">
-            Avg &nbsp;<span className="text-blue-600 font-bold">{stats.avgPerUser}</span>&nbsp; submissions each
+            Avg &nbsp;<span className="text-blue-600 font-bold">{stats.avgPerUser}</span>&nbsp; {translate('avgSubmissionsEach')}
           </div>
         </div>
 
         <div className="rounded-[16px] bg-white dark:bg-[#111C44] shadow-horizon border-l-[4px] border-green-500 p-4 relative overflow-hidden">
           <div className="flex justify-between items-start mb-3">
-            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Active Today</p>
+            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">{translate('activeToday')}</p>
             <div className="w-8 h-8 rounded-lg bg-green-50 dark:bg-green-900/30 flex items-center justify-center">
               <Activity className="w-4 h-4 text-green-600 dark:text-green-400" />
             </div>
@@ -181,18 +179,18 @@ export default function UsersClient({
           <h4 className="text-3xl font-extrabold text-navy dark:text-white mb-1">{stats.activeToday}</h4>
           <div className="flex items-center text-xs font-medium text-gray-500 dark:text-gray-400">
             {stats.activeToday > stats.activeYest ? (
-              <span className="text-green-600 font-bold flex items-center gap-1"><TrendingUp className="w-3 h-3" /> +{stats.activeToday - stats.activeYest} vs yesterday</span>
+              <span className="text-green-600 font-bold flex items-center gap-1"><TrendingUp className="w-3 h-3" /> +{stats.activeToday - stats.activeYest} {translate('vsYesterday')}</span>
             ) : stats.activeToday < stats.activeYest ? (
-              <span className="text-red-500 font-bold flex items-center gap-1"><TrendingDown className="w-3 h-3" /> {stats.activeToday - stats.activeYest} vs yesterday</span>
+              <span className="text-red-500 font-bold flex items-center gap-1"><TrendingDown className="w-3 h-3" /> {stats.activeToday - stats.activeYest} {translate('vsYesterday')}</span>
             ) : (
-              <span>{stats.activeYest} active yesterday</span>
+              <span>{stats.activeYest} {translate('activeYesterday')}</span>
             )}
           </div>
         </div>
 
         <div className="rounded-[16px] bg-white dark:bg-[#111C44] shadow-horizon border-l-[4px] border-amber-500 p-4 relative overflow-hidden">
           <div className="flex justify-between items-start mb-3">
-            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Top Submitter</p>
+            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">{translate('topSubmitter')}</p>
             <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center">
               <Award className="w-4 h-4 text-amber-500" />
             </div>
@@ -209,13 +207,13 @@ export default function UsersClient({
 
         <div className="rounded-[16px] bg-white dark:bg-[#111C44] shadow-horizon border-l-[4px] border-[#E41E26] p-4 relative overflow-hidden">
           <div className="flex justify-between items-start mb-3">
-            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Total Submissions</p>
+            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">{translate('totalSubmissions')}</p>
             <div className="w-8 h-8 rounded-lg bg-red-50 dark:bg-red-900/30 flex items-center justify-center">
               <BarChart3 className="w-4 h-4 text-[#E41E26]" />
             </div>
           </div>
           <h4 className="text-3xl font-extrabold text-navy dark:text-white mb-1">{stats.totalSubmissions.toLocaleString()}</h4>
-          <div className="flex items-center text-xs font-medium text-gray-500 dark:text-gray-400">Across all users</div>
+          <div className="flex items-center text-xs font-medium text-gray-500 dark:text-gray-400">{translate('acrossAllUsers')}</div>
         </div>
       </div>
 

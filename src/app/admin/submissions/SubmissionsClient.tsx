@@ -14,6 +14,7 @@ import ExportModal from './ExportModal';
 import SubmissionDetailsModal from '../SubmissionDetailsModal';
 import dynamic from 'next/dynamic';
 import MultiSelect from '@/components/MultiSelect';
+import { useLanguage } from '@/context/LanguageContext';
 
 const AdminMap = dynamic(() => import('../AdminMap'), { 
   ssr: false,
@@ -46,6 +47,7 @@ export default function SubmissionsClient({
   brands: any[],
   provinces: any[]
 }) {
+  const { translate } = useLanguage();
   const [submissions, setSubmissions] = useState(initialSubmissions);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
@@ -347,7 +349,7 @@ export default function SubmissionsClient({
         <div className="rounded-[16px] bg-white dark:bg-[#111C44] shadow-horizon border-l-[4px] border-blue-600 p-4 relative overflow-hidden">
           <div className="flex justify-between items-start mb-3">
             <p className="text-[11px] font-bold text-gray-400 dark:text-gray-500 tracking-wider uppercase">
-              {activeFilterCount > 0 ? 'Filtered Records' : 'Total Records'}
+              {activeFilterCount > 0 ? 'Filtered Records' : translate('totalRecords')}
             </p>
             <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center">
               <FileSpreadsheet className="w-4 h-4 text-blue-600 dark:text-blue-400" />
@@ -357,7 +359,7 @@ export default function SubmissionsClient({
           <div className="flex items-center text-xs font-medium text-gray-500 dark:text-gray-400">
             {activeFilterCount > 0
               ? <span className="text-blue-600 font-bold">{activeFilterCount} filter{activeFilterCount > 1 ? 's' : ''} active</span>
-              : <span>All submissions in database</span>
+              : <span>{translate('allSubmissionsInDatabase')}</span>
             }
           </div>
         </div>
@@ -365,7 +367,7 @@ export default function SubmissionsClient({
         {/* Card 2: Today */}
         <div className="rounded-[16px] bg-white dark:bg-[#111C44] shadow-horizon border-l-[4px] border-green-500 p-4 relative overflow-hidden">
           <div className="flex justify-between items-start mb-3">
-            <p className="text-[11px] font-bold text-gray-400 dark:text-gray-500 tracking-wider uppercase">Submitted Today</p>
+            <p className="text-[11px] font-bold text-gray-400 dark:text-gray-500 tracking-wider uppercase">{translate('submittedToday')}</p>
             <div className="w-8 h-8 rounded-lg bg-green-50 dark:bg-green-900/30 flex items-center justify-center">
               <Clock className="w-4 h-4 text-green-600 dark:text-green-400" />
             </div>
@@ -375,10 +377,10 @@ export default function SubmissionsClient({
             {stats.todayGrowth !== null ? (
               <span className={`font-bold flex items-center gap-1 ${Number(stats.todayGrowth) >= 0 ? 'text-green-600' : 'text-red-500'}`}>
                 {Number(stats.todayGrowth) >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                {Number(stats.todayGrowth) >= 0 ? '+' : ''}{stats.todayGrowth}% vs yesterday
+                {Number(stats.todayGrowth) >= 0 ? '+' : ''}{stats.todayGrowth}% {translate('vsYesterday')}
               </span>
             ) : (
-              <span>{stats.yesterdayCount} yesterday</span>
+              <span>{stats.yesterdayCount} {translate('vsYesterday')}</span>
             )}
           </div>
         </div>
@@ -386,7 +388,7 @@ export default function SubmissionsClient({
         {/* Card 3: With Photos */}
         <div className="rounded-[16px] bg-white dark:bg-[#111C44] shadow-horizon border-l-[4px] border-purple-500 p-4 relative overflow-hidden">
           <div className="flex justify-between items-start mb-3">
-            <p className="text-[11px] font-bold text-gray-400 dark:text-gray-500 tracking-wider uppercase">With Photos</p>
+            <p className="text-[11px] font-bold text-gray-400 dark:text-gray-500 tracking-wider uppercase">{translate('withPhotos')}</p>
             <div className="w-8 h-8 rounded-lg bg-purple-50 dark:bg-purple-900/30 flex items-center justify-center">
               <Camera className="w-4 h-4 text-purple-600 dark:text-purple-400" />
             </div>
@@ -395,14 +397,14 @@ export default function SubmissionsClient({
           <div className="flex items-center text-xs font-medium text-gray-500 dark:text-gray-400">
             <span className="font-bold text-purple-600">
               {stats.total > 0 ? Math.round(stats.withPhotos / stats.total * 100) : 0}%
-            </span> &nbsp;photo coverage rate
+            </span> &nbsp;{translate('photoCoverageRate')}
           </div>
         </div>
 
         {/* Card 4: Avg Net Price */}
         <div className="rounded-[16px] bg-white dark:bg-[#111C44] shadow-horizon border-l-[4px] border-[#E41E26] p-4 relative overflow-hidden">
           <div className="flex justify-between items-start mb-3">
-            <p className="text-[11px] font-bold text-gray-400 dark:text-gray-500 tracking-wider uppercase">Avg Net Price</p>
+            <p className="text-[11px] font-bold text-gray-400 dark:text-gray-500 tracking-wider uppercase">{translate('avgNetPrice')}</p>
             <div className="w-8 h-8 rounded-lg bg-red-50 dark:bg-red-900/30 flex items-center justify-center">
               <BarChart3 className="w-4 h-4 text-[#E41E26]" />
             </div>
@@ -413,7 +415,7 @@ export default function SubmissionsClient({
           <div className="flex items-center text-xs font-medium text-gray-500 dark:text-gray-400">
             {stats.withNotes > 0 && (
               <span className="text-amber-600 font-bold flex items-center gap-1">
-                <StickyNote className="w-3 h-3" /> {stats.withNotes} record{stats.withNotes > 1 ? 's' : ''} have notes
+                <StickyNote className="w-3 h-3" /> {stats.withNotes} {translate('recordsHaveNotes')}
               </span>
             )}
           </div>
