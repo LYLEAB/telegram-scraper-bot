@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { MapPin, User, Tag, DollarSign, Target, Send, Navigation, Store, Boxes, LayoutGrid, Info, Check, Camera, WifiOff, RefreshCw } from 'lucide-react';
+import { MapPin, User, Tag, DollarSign, Target, Send, Navigation, Store, Boxes, LayoutGrid, Info, Check, Camera, WifiOff, RefreshCw, XCircle } from 'lucide-react';
 import SearchableSelect from './SearchableSelect';
 import imageCompression from 'browser-image-compression';
 import dynamic from 'next/dynamic';
@@ -40,6 +40,8 @@ export default function Form({ options }: { options: any }) {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState("Pricing data has been submitted and sent to Telegram.");
+  const [errorModal, setErrorModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   const [hasSubmitted, setHasSubmitted] = useState(false);
   
   const [photoBase64s, setPhotoBase64s] = useState<string[]>([]);
@@ -119,7 +121,8 @@ export default function Form({ options }: { options: any }) {
         });
       } catch (error) {
         console.error("Error compressing images:", error);
-        alert("Failed to process images. Please try again.");
+        setErrorMessage("Failed to process images. Please try again.");
+        setErrorModal(true);
       }
     }
   };
@@ -161,7 +164,8 @@ export default function Form({ options }: { options: any }) {
       setSuccessMessage(`Successfully synced ${successCount} offline submission(s)!`);
       setSuccess(true);
     } else {
-      alert("Failed to sync. Please ensure you have a stable internet connection.");
+      setErrorMessage("Please wait and sync when you are online.");
+      setErrorModal(true);
     }
   };
 
@@ -169,7 +173,8 @@ export default function Form({ options }: { options: any }) {
     e.preventDefault();
 
     if (!formData.brand_code) {
-      alert("Please select a Brand before submitting.");
+      setErrorMessage("Please select a Brand before submitting.");
+      setErrorModal(true);
       return;
     }
 
@@ -220,7 +225,8 @@ export default function Form({ options }: { options: any }) {
         setSuccess(true);
         setHasSubmitted(true);
       } else {
-        alert('Error submitting form: ' + err.message);
+        setErrorMessage('Error submitting form: ' + err.message);
+        setErrorModal(true);
         setLoading(false);
         return;
       }
@@ -304,6 +310,26 @@ export default function Form({ options }: { options: any }) {
               className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl transition-colors"
             >
               Continue
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Error Modal */}
+      {errorModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm text-center transform transition-all scale-in-90">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <XCircle className="w-8 h-8 text-red-600" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Error</h3>
+            <p className="text-gray-500 mb-6">{errorMessage}</p>
+            <button 
+              type="button"
+              onClick={() => setErrorModal(false)}
+              className="w-full bg-gray-900 hover:bg-gray-800 text-white font-bold py-3 px-4 rounded-xl transition-colors"
+            >
+              Close
             </button>
           </div>
         </div>
