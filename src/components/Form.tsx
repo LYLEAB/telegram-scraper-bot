@@ -39,6 +39,7 @@ export default function Form({ options }: { options: any }) {
   const [locError, setLocError] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("Pricing data has been submitted and sent to Telegram.");
   const [hasSubmitted, setHasSubmitted] = useState(false);
   
   const [photoBase64s, setPhotoBase64s] = useState<string[]>([]);
@@ -157,7 +158,8 @@ export default function Form({ options }: { options: any }) {
     setSyncing(false);
     
     if (successCount > 0) {
-      alert(`Successfully synced ${successCount} offline submissions!`);
+      setSuccessMessage(`Successfully synced ${successCount} offline submission(s)!`);
+      setSuccess(true);
     } else {
       alert("Failed to sync. Please ensure you have a stable internet connection.");
     }
@@ -203,6 +205,7 @@ export default function Form({ options }: { options: any }) {
         throw new Error('Failed to submit');
       }
 
+      setSuccessMessage("Pricing data has been submitted and sent to Telegram.");
       setSuccess(true);
       setHasSubmitted(true);
       
@@ -212,7 +215,8 @@ export default function Form({ options }: { options: any }) {
         const newQueue = [...offlineQueue, payload];
         setOfflineQueue(newQueue);
         localStorage.setItem('offlineSubmissions', JSON.stringify(newQueue));
-        alert("You appear to be offline or have a weak connection. Your submission has been saved securely to your phone. Please click 'Sync Now' when you have internet access.");
+        
+        setSuccessMessage("You appear to be offline. Your submission has been saved securely to your phone. Please click 'Sync Now' when you have internet access.");
         setSuccess(true);
         setHasSubmitted(true);
       } else {
@@ -293,7 +297,7 @@ export default function Form({ options }: { options: any }) {
               <Check className="w-8 h-8 text-green-600" />
             </div>
             <h3 className="text-xl font-bold text-gray-900 mb-2">Success!</h3>
-            <p className="text-gray-500 mb-6">Pricing data has been submitted and sent to Telegram.</p>
+            <p className="text-gray-500 mb-6">{successMessage}</p>
             <button 
               type="button"
               onClick={() => setSuccess(false)}
