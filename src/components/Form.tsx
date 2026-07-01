@@ -164,7 +164,7 @@ export default function Form({ options }: { options: any }) {
       setSuccessMessage(`Successfully synced ${successCount} offline submission(s)!`);
       setSuccess(true);
     } else {
-      setErrorMessage("Please wait and sync when you are online.");
+      setErrorMessage("Failed to sync. If this persists, the saved submissions may be too large or invalid. Please delete them using the Trash icon and try a new submission.");
       setErrorModal(true);
     }
   };
