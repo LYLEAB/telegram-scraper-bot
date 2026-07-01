@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { MapPin, User, Tag, DollarSign, Target, Send, Navigation, Store, Boxes, LayoutGrid, Info, Check, Camera } from 'lucide-react';
+import { MapPin, User, Tag, DollarSign, Target, Send, Navigation, Store, Boxes, LayoutGrid, Info, Check, Camera, WifiOff, RefreshCw } from 'lucide-react';
 import SearchableSelect from './SearchableSelect';
+import imageCompression from 'browser-image-compression';
 import dynamic from 'next/dynamic';
 
 const MapPicker = dynamic(() => import('./MapPicker'), { 
@@ -41,6 +42,20 @@ export default function Form({ options }: { options: any }) {
   const [hasSubmitted, setHasSubmitted] = useState(false);
   
   const [photoBase64s, setPhotoBase64s] = useState<string[]>([]);
+  const [offlineQueue, setOfflineQueue] = useState<any[]>([]);
+  const [syncing, setSyncing] = useState(false);
+  
+  // Load offline queue on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('offlineSubmissions');
+    if (saved) {
+      try {
+        setOfflineQueue(JSON.parse(saved));
+      } catch (e) {
+        console.error("Failed to parse offline queue", e);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     if (navigator.geolocation) {
@@ -77,24 +92,75 @@ export default function Form({ options }: { options: any }) {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handlePhotoChange = (e: any) => {
+  const handlePhotoChange = async (e: any) => {
     const files = Array.from(e.target.files);
     if (files.length > 0) {
-      const readers = files.map((file: any) => {
-        return new Promise<string>((resolve) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result as string);
-          reader.readAsDataURL(file);
+      try {
+        const compressedFiles = await Promise.all(files.map(async (file: any) => {
+          const options = {
+            maxSizeMB: 0.8, // 800KB limit for high quality but fast upload
+            maxWidthOrHeight: 1600, // 1600px is plenty for reading text/labels
+            useWebWorker: true
+          };
+          return await imageCompression(file, options);
+        }));
+
+        const readers = compressedFiles.map((file: any) => {
+          return new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.readAsDataURL(file);
+          });
         });
-      });
-      Promise.all(readers).then(base64Array => {
-        setPhotoBase64s(prev => [...prev, ...base64Array]);
-      });
+        
+        Promise.all(readers).then(base64Array => {
+          setPhotoBase64s(prev => [...prev, ...base64Array]);
+        });
+      } catch (error) {
+        console.error("Error compressing images:", error);
+        alert("Failed to process images. Please try again.");
+      }
     }
   };
 
   const removePhoto = (index: number) => {
     setPhotoBase64s(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const syncOfflineSubmissions = async () => {
+    if (offlineQueue.length === 0) return;
+    setSyncing(true);
+    
+    const remainingQueue = [...offlineQueue];
+    let successCount = 0;
+
+    for (let i = offlineQueue.length - 1; i >= 0; i--) {
+      const payload = offlineQueue[i];
+      try {
+        const res = await fetch('/api/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        
+        if (res.ok) {
+          remainingQueue.splice(i, 1);
+          successCount++;
+        }
+      } catch (err) {
+        console.error("Sync failed for a submission", err);
+      }
+    }
+
+    setOfflineQueue(remainingQueue);
+    localStorage.setItem('offlineSubmissions', JSON.stringify(remainingQueue));
+    setSyncing(false);
+    
+    if (successCount > 0) {
+      alert(`Successfully synced ${successCount} offline submissions!`);
+    } else {
+      alert("Failed to sync. Please ensure you have a stable internet connection.");
+    }
   };
 
   const handleSubmit = async (e: any) => {
@@ -108,20 +174,24 @@ export default function Form({ options }: { options: any }) {
     setLoading(true);
     setSuccess(false);
 
+    const { category_code, ...payloadBase } = formData;
+    const payload = {
+      ...payloadBase,
+      submission_date: new Date().toISOString().split('T')[0],
+      lat: location?.lat || null,
+      lng: location?.lng || null,
+      basic_price: Number(formData.basic_price) || null,
+      net_price: Number(formData.net_price) || null,
+      sellout_price_seller: Number(formData.sellout_price_seller) || null,
+      sellout_price_consumer: Number(formData.sellout_price_consumer) || null,
+      sellout_price_consumer_can: Number(formData.sellout_price_consumer_can) || null,
+      photoBase64s, 
+    };
+
     try {
-      const { category_code, ...payloadBase } = formData;
-      const payload = {
-        ...payloadBase,
-        submission_date: new Date().toISOString().split('T')[0],
-        lat: location?.lat || null,
-        lng: location?.lng || null,
-        basic_price: Number(formData.basic_price) || null,
-        net_price: Number(formData.net_price) || null,
-        sellout_price_seller: Number(formData.sellout_price_seller) || null,
-        sellout_price_consumer: Number(formData.sellout_price_consumer) || null,
-        sellout_price_consumer_can: Number(formData.sellout_price_consumer_can) || null,
-        photoBase64s, 
-      };
+      if (!navigator.onLine) {
+        throw new Error("OFFLINE");
+      }
 
       const res = await fetch('/api/submit', {
         method: 'POST',
@@ -135,28 +205,41 @@ export default function Form({ options }: { options: any }) {
 
       setSuccess(true);
       setHasSubmitted(true);
-      // Reset only the pricing and note fields so they can submit another easily
-      setFormData({
-        ...formData,
-        scheme: '',
-        basic_price: '',
-        net_price: '',
-        sellout_price_seller: '',
-        sellout_price_consumer: '',
-        sellout_price_consumer_can: '',
-        note: '',
-      });
-      setPhotoBase64s([]);
       
-      // Clear file input
-      const fileInput = document.getElementById('photo_upload') as HTMLInputElement;
-      if (fileInput) fileInput.value = '';
-      
-    } catch (err) {
-      alert('Error submitting form');
-    } finally {
-      setLoading(false);
-    }
+    } catch (err: any) {
+      // If network error (Failed to fetch) or explicitly offline, save to queue
+      if (err.message === "OFFLINE" || err.message === "Failed to fetch" || err.message.includes("NetworkError")) {
+        const newQueue = [...offlineQueue, payload];
+        setOfflineQueue(newQueue);
+        localStorage.setItem('offlineSubmissions', JSON.stringify(newQueue));
+        alert("You appear to be offline or have a weak connection. Your submission has been saved securely to your phone. Please click 'Sync Now' when you have internet access.");
+        setSuccess(true);
+        setHasSubmitted(true);
+      } else {
+        alert('Error submitting form: ' + err.message);
+        setLoading(false);
+        return;
+      }
+    } 
+
+    // Reset fields upon success (either online or offline)
+    setFormData({
+      ...formData,
+      scheme: '',
+      basic_price: '',
+      net_price: '',
+      sellout_price_seller: '',
+      sellout_price_consumer: '',
+      sellout_price_consumer_can: '',
+      note: '',
+    });
+    setPhotoBase64s([]);
+    
+    // Clear file input
+    const fileInput = document.getElementById('photo_upload') as HTMLInputElement;
+    if (fileInput) fileInput.value = '';
+    
+    setLoading(false);
   };
 
   // Filtered dropdown lists based on cascades
@@ -178,6 +261,30 @@ export default function Form({ options }: { options: any }) {
 
   return (
     <>
+      {/* Offline Sync Banner */}
+      {offlineQueue.length > 0 && (
+        <div className="mb-6 bg-orange-50 border border-orange-200 rounded-xl p-4 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-3 text-orange-800">
+            <div className="bg-orange-100 p-2 rounded-full">
+              <WifiOff className="w-5 h-5 text-orange-600" />
+            </div>
+            <div>
+              <p className="font-bold">Offline Submissions Pending</p>
+              <p className="text-sm opacity-80">You have {offlineQueue.length} submission(s) waiting to be uploaded.</p>
+            </div>
+          </div>
+          <button 
+            type="button"
+            onClick={syncOfflineSubmissions}
+            disabled={syncing}
+            className="w-full sm:w-auto flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg font-medium transition-colors"
+          >
+            <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
+            {syncing ? 'Syncing...' : 'Sync Now'}
+          </button>
+        </div>
+      )}
+
       {/* Success Modal */}
       {success && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
