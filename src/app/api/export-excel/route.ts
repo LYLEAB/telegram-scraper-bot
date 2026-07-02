@@ -60,6 +60,9 @@ export async function POST(request: Request) {
       const isEven = (r - 2) % 2 === 0; // Data index starts from 1
       row.eachCell((cell) => {
         cell.font = { name: 'Arial', size: 10 };
+        if (cell.value && typeof cell.value === 'object' && 'hyperlink' in cell.value) {
+          cell.font = { ...cell.font, color: { argb: 'FF0563C1' }, underline: true };
+        }
         cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: isEven ? 'FFFFF2CC' : 'FFD9E1F2' } };
         cell.alignment = { vertical: 'middle', horizontal: 'center' };
         cell.border = {

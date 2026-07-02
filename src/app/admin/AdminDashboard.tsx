@@ -500,7 +500,7 @@ export default function AdminDashboard({
         sub.district_label || '',
         sub.commune || '',
         sub.village || '',
-        (sub.lat && sub.lng) ? `${sub.lat}, ${sub.lng}` : '',
+        (sub.lat && sub.lng) ? { text: `${sub.lat}, ${sub.lng}`, hyperlink: `https://www.google.com/maps?q=${sub.lat},${sub.lng}` } : '',
         sub.submitted_by || ''
       ];
     });

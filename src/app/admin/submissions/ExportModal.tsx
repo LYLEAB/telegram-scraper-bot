@@ -113,7 +113,7 @@ export default function ExportModal({ isOpen, onClose, data }: ExportModalProps)
           case 'basic_price': rowData.push(sub.basic_price ? `$${sub.basic_price}` : ''); break;
           case 'net_price': rowData.push(computedNetPrice ? `$${computedNetPrice}` : ''); break;
           case 'discount': rowData.push(''); break; // Currently not captured in DB
-          case 'gps': rowData.push((sub.lat && sub.lng) ? `${sub.lat}, ${sub.lng}` : ''); break;
+          case 'gps': rowData.push((sub.lat && sub.lng) ? { text: `${sub.lat}, ${sub.lng}`, hyperlink: `https://www.google.com/maps?q=${sub.lat},${sub.lng}` } : ''); break;
           case 'commune': rowData.push(sub.commune || ''); break;
           case 'village': rowData.push(sub.village || ''); break;
           case 'sellout_price_consumer': rowData.push(sub.sellout_price_consumer ? `$${sub.sellout_price_consumer}` : ''); break;
