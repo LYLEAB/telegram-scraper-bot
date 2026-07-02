@@ -283,7 +283,7 @@ export default function Header({ sidebarOpen, setSidebarOpen }: HeaderProps) {
           </button>
           
           {showNotifications && (
-            <div className="absolute right-0 mt-4 w-96 rounded-2xl bg-white dark:bg-[#111C44] shadow-2xl border border-gray-100 dark:border-gray-800 overflow-hidden" style={{zIndex:999}}>
+            <div className="absolute -right-10 sm:right-0 mt-4 w-[320px] sm:w-96 rounded-2xl bg-white dark:bg-[#111C44] shadow-2xl border border-gray-100 dark:border-gray-800 overflow-hidden" style={{zIndex:999}}>
               {/* Header */}
               <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-800">
                 <div className="flex items-center gap-2">
