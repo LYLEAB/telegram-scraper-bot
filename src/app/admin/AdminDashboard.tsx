@@ -7,7 +7,8 @@ import {
   Users, MapPin as MapPinIcon, Tag, ArrowRight,
   ListFilter, Maximize2, ExternalLink, Calendar, Search, MapPin, X, Trash2, Camera, Download, FileText, Image as ImageIcon
 } from 'lucide-react';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 import PhotoModal from './PhotoModal';
 import SubmissionDetailsModal from './SubmissionDetailsModal';
 import { 
@@ -447,38 +448,58 @@ export default function AdminDashboard({
     }
   };
 
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     if (filteredSubmissions.length === 0) return;
     
-    // 1. Create Data Array
-    // Row 1: Title
-    const excelData: any[][] = [
-      ['Weekly Market Price Update'],
-      [], // Row 2: Blank
-      [
-        'Date', 'Chanel', 'Category', 'Brand', 'SKUs', 'NCP/ORD', 
-        'Basic price', 'Price In', 'Scheme', 'FOC', 'Discount', 
-        'Price after promotion', 'Enconsumer', 'W/S-Sell Per Carton', 
-        'Remark', 'Other'
-      ]
-    ];
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('Weekly Market Price Update');
     
-    filteredSubmissions.forEach(sub => {
+    const headers = [
+      'Date', 'Chanel', 'Category', 'Brand', 'SKUs', 'NCP/ORD', 
+      'Basic price', 'Price In', 'Scheme', 'FOC', 'Discount', 
+      'Price after promotion', 'Enconsumer', 'W/S-Sell Per Carton', 
+      'Remark', 'Other'
+    ];
+
+    // Add title row
+    const titleRow = sheet.addRow(['Weekly Market Price Update']);
+    const lastColLetter = String.fromCharCode(64 + headers.length) > 'Z' ? 'Z' : String.fromCharCode(64 + headers.length);
+    sheet.mergeCells(`A1:${lastColLetter}1`);
+    titleRow.height = 30;
+    titleRow.getCell(1).font = { name: 'Arial', family: 4, size: 14, bold: true, color: { argb: 'FFFFFFFF' } };
+    titleRow.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF002060' } };
+    titleRow.getCell(1).alignment = { vertical: 'middle', horizontal: 'center' };
+
+    // Add headers
+    const headerRow = sheet.addRow(headers);
+    headerRow.eachCell((cell) => {
+      cell.font = { name: 'Arial', bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF002060' } };
+      cell.alignment = { vertical: 'middle', horizontal: 'center' };
+      cell.border = {
+        top: { style: 'thin', color: { argb: 'FFFFFFFF' } },
+        left: { style: 'thin', color: { argb: 'FFFFFFFF' } },
+        bottom: { style: 'thin', color: { argb: 'FFFFFFFF' } },
+        right: { style: 'thin', color: { argb: 'FFFFFFFF' } }
+      };
+    });
+    
+    filteredSubmissions.forEach((sub, i) => {
       const date = sub.phnom_penh_time 
         ? new Date(sub.phnom_penh_time) 
         : new Date(sub.created_at);
         
       const parsedScheme = parseScheme(sub.scheme);
       
-      excelData.push([
+      const rowData = [
         date.toLocaleDateString(),           // Date
         sub.channel_label || '',             // Chanel
         sub.category_label || '',            // Category
         sub.brand_label || '',               // Brand
         sub.type_label || '',                // SKUs
-        sub.price_source_label || 'NCP',     // NCP/ORD (Mapping price source)
+        sub.price_source_label || 'NCP',     // NCP/ORD
         sub.basic_price || '',               // Basic price
-        sub.basic_price || '',               // Price In (Duplicating basic price since we don't collect separate Price In)
+        sub.basic_price || '',               // Price In
         parsedScheme.scheme,                 // Scheme
         parsedScheme.foc,                    // FOC
         '',                                  // Discount
@@ -487,20 +508,37 @@ export default function AdminDashboard({
         sub.sellout_price_seller || '',      // W/S-Sell Per Carton
         sub.note || '',                      // Remark
         `${sub.submitted_by || ''} - ${sub.province_label || ''}, ${sub.district_label || ''}` // Other
-      ]);
+      ];
+
+      const dataRow = sheet.addRow(rowData);
+      const isEven = i % 2 === 0;
+      
+      dataRow.eachCell((cell) => {
+        cell.alignment = { vertical: 'middle', horizontal: 'center' };
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: isEven ? 'FFFFF2CC' : 'FFD9E1F2' }
+        };
+        cell.border = {
+          top: { style: 'thin', color: { argb: 'FFB4C6E7' } },
+          left: { style: 'thin', color: { argb: 'FFB4C6E7' } },
+          bottom: { style: 'thin', color: { argb: 'FFB4C6E7' } },
+          right: { style: 'thin', color: { argb: 'FFB4C6E7' } }
+        };
+      });
     });
 
-    // 2. Create Workbook and Worksheet
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.aoa_to_sheet(excelData);
+    // Set column widths
+    sheet.columns.forEach((col, i) => {
+      if (headers[i] === 'Brand') col.width = 25;
+      else if (headers[i] === 'Remark' || headers[i] === 'Other') col.width = 30;
+      else col.width = 15;
+    });
 
-    // Merge the first row title
-    if (!ws['!merges']) ws['!merges'] = [];
-    ws['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 15 } });
-
-    // 3. Save File
-    XLSX.utils.book_append_sheet(wb, ws, "Market Price Update");
-    XLSX.writeFile(wb, `MI_Price_Update_${new Date().toISOString().split('T')[0]}.xlsx`);
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    saveAs(blob, `MI_Price_Update_Dashboard_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
   const openPhotos = (urlsString: string) => {

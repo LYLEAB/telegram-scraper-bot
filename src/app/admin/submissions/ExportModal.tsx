@@ -3,6 +3,8 @@ import { X, FileSpreadsheet, FileText } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 
 interface ExportModalProps {
   isOpen: boolean;
@@ -123,18 +125,68 @@ export default function ExportModal({ isOpen, onClose, data }: ExportModalProps)
     return { headers, rows };
   };
 
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     const { headers, rows } = getExportData();
-    const info = [`Exported ${data.length} records — ${new Date().toLocaleString()}`];
     
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.aoa_to_sheet([[...info], [], headers, ...rows]);
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('Weekly Market Price Update');
     
-    if (!ws['!merges']) ws['!merges'] = [];
-    ws['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: headers.length - 1 } });
-    
-    XLSX.utils.book_append_sheet(wb, ws, 'Submissions');
-    XLSX.writeFile(wb, `MI_Price_Update_${new Date().toISOString().split('T')[0]}.xlsx`);
+    // Add title row
+    const titleRow = sheet.addRow(['Weekly Market Price Update']);
+    // calculate merge cell letters (A to Z etc.). Simple array index mapping:
+    const lastColLetter = String.fromCharCode(64 + headers.length) > 'Z' ? 'Z' : String.fromCharCode(64 + headers.length);
+    sheet.mergeCells(`A1:${lastColLetter}1`);
+    titleRow.height = 30;
+    titleRow.getCell(1).font = { name: 'Arial', family: 4, size: 14, bold: true, color: { argb: 'FFFFFFFF' } };
+    titleRow.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF002060' } };
+    titleRow.getCell(1).alignment = { vertical: 'middle', horizontal: 'center' };
+
+    // Add headers
+    const headerRow = sheet.addRow(headers);
+    headerRow.eachCell((cell, colNumber) => {
+      cell.font = { name: 'Arial', bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF002060' } };
+      cell.alignment = { vertical: 'middle', horizontal: 'center' };
+      cell.border = {
+        top: { style: 'thin', color: { argb: 'FFFFFFFF' } },
+        left: { style: 'thin', color: { argb: 'FFFFFFFF' } },
+        bottom: { style: 'thin', color: { argb: 'FFFFFFFF' } },
+        right: { style: 'thin', color: { argb: 'FFFFFFFF' } }
+      };
+    });
+
+    // Add data
+    rows.forEach((row, i) => {
+      const dataRow = sheet.addRow(row);
+      const isEven = i % 2 === 0;
+      
+      dataRow.eachCell((cell, colNumber) => {
+        cell.alignment = { vertical: 'middle', horizontal: 'center' };
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: isEven ? 'FFFFF2CC' : 'FFD9E1F2' } // Light yellow and Light blue alternating
+        };
+        cell.border = {
+          top: { style: 'thin', color: { argb: 'FFB4C6E7' } },
+          left: { style: 'thin', color: { argb: 'FFB4C6E7' } },
+          bottom: { style: 'thin', color: { argb: 'FFB4C6E7' } },
+          right: { style: 'thin', color: { argb: 'FFB4C6E7' } }
+        };
+      });
+    });
+
+    // Set column widths
+    sheet.columns.forEach((col, i) => {
+      if (i === 0) col.width = 6;
+      else if (headers[i] === 'Brand') col.width = 25;
+      else if (headers[i] === 'Notes') col.width = 30;
+      else col.width = 15;
+    });
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    saveAs(blob, `MI_Price_Update_${new Date().toISOString().split('T')[0]}.xlsx`);
     onClose();
   };
 
