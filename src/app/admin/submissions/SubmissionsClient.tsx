@@ -308,6 +308,15 @@ export default function SubmissionsClient({
       setIsDeleting(id);
       try { 
         await fetch(`/api/submissions/${id}`, { method: 'DELETE' }); 
+        window.dispatchEvent(new CustomEvent('app-notification', { 
+          detail: {
+            id: `del-${id}`,
+            title: 'Submission Deleted',
+            message: 'A submission was deleted',
+            time: new Date().toISOString(),
+            unread: true
+          }
+        }));
         window.dispatchEvent(new CustomEvent('submission-deleted', { detail: { id } }));
       } catch {}
     }
@@ -337,6 +346,15 @@ export default function SubmissionsClient({
       const res = await fetch(`/api/submissions/${id}`, { method: 'DELETE' });
       if (res.ok) {
         setSubmissions(prev => prev.filter(s => s.id !== id));
+        window.dispatchEvent(new CustomEvent('app-notification', { 
+          detail: {
+            id: `del-${id}`,
+            title: 'Submission Deleted',
+            message: 'A submission was deleted',
+            time: new Date().toISOString(),
+            unread: true
+          }
+        }));
         window.dispatchEvent(new CustomEvent('submission-deleted', { detail: { id } }));
       }
     } catch {}

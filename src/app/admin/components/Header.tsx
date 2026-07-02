@@ -95,7 +95,18 @@ export default function Header({ sidebarOpen, setSidebarOpen }: HeaderProps) {
       const res = await fetch('/api/notifications');
       if (res.ok) {
         const data = await res.json();
-        setNotifications(data);
+        // Use localStorage to track unread status reliably
+        const lastViewedStr = typeof window !== 'undefined' ? localStorage.getItem('lastViewedNotificationsAt') : null;
+        const lastViewed = lastViewedStr ? new Date(lastViewedStr).getTime() : 0;
+        
+        const mappedData = data.map((n: any) => {
+          const time = new Date(n.time).getTime();
+          return {
+            ...n,
+            unread: time > lastViewed
+          };
+        });
+        setNotifications(mappedData);
       }
     } catch (e) {
       console.error('Failed to fetch notifications', e);
@@ -245,7 +256,16 @@ export default function Header({ sidebarOpen, setSidebarOpen }: HeaderProps) {
         {/* Notifications Dropdown */}
         <div className="relative" ref={notifRef}>
           <button 
-            onClick={() => { setShowNotifications(!showNotifications); setShowProfile(false); }}
+            onClick={() => { 
+              if (!showNotifications) {
+                // When opening, mark all as read and update localStorage
+                const now = new Date().toISOString();
+                localStorage.setItem('lastViewedNotificationsAt', now);
+                setNotifications(prev => prev.map(n => ({ ...n, unread: false })));
+              }
+              setShowNotifications(!showNotifications); 
+              setShowProfile(false); 
+            }}
             className="relative flex items-center justify-center text-[#A3AED0] hover:text-navy dark:hover:text-white transition p-1"
           >
             <Bell className="w-5 h-5" />
