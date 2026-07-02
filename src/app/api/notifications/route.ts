@@ -30,7 +30,7 @@ export async function GET() {
     time: sub.created_at,
     unread: sub.notification_status === 'pending',
     hasPhoto: !!sub.photo_url,
-    hasNote: !!sub.note, note: sub.note,
+    hasNote: !!sub.note,
     netPrice: sub.net_price,
   }));
 

@@ -111,6 +111,34 @@ export default function Header({ sidebarOpen, setSidebarOpen }: HeaderProps) {
     return () => clearInterval(interval);
   }, []);
 
+  // Listen for real-time app notifications (submit, delete, etc.)
+  useEffect(() => {
+    const handleAppNotification = (e: any) => {
+      const detail = e.detail;
+      setNotifications(prev => {
+        // Prevent duplicates
+        if (prev.find(n => n.id === detail.id)) return prev;
+        
+        // Format to match dropdown structure
+        const newNotif = {
+          id: detail.id || `local-${Date.now()}`,
+          title: detail.title,
+          submitter: detail.submission?.submitted_by || 'System',
+          province: detail.submission?.province_label || '',
+          time: new Date().toISOString(),
+          unread: true,
+          hasPhoto: !!detail.submission?.photo_url,
+          hasNote: !!detail.submission?.note,
+          netPrice: detail.submission?.net_price
+        };
+        return [newNotif, ...prev];
+      });
+    };
+
+    window.addEventListener('app-notification', handleAppNotification);
+    return () => window.removeEventListener('app-notification', handleAppNotification);
+  }, []);
+
   const handleNotificationClick = async (notif: any) => {
     // 1. Optimistically mark as read
     setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, unread: false } : n));
@@ -213,8 +241,8 @@ export default function Header({ sidebarOpen, setSidebarOpen }: HeaderProps) {
           >
             <Bell className="w-5 h-5" />
             {unreadCount > 0 && (
-              <span className="absolute top-0 right-0 flex h-[14px] w-[14px] items-center justify-center rounded-full bg-brand text-[8px] text-white font-bold border-2 border-white dark:border-[#111C44]">
-                {unreadCount}
+              <span className="absolute -top-1 -right-1 flex h-[16px] w-[16px] items-center justify-center rounded-full bg-[#E41E26] text-[9px] text-white font-bold border-2 border-white dark:border-[#111C44]">
+                {unreadCount > 9 ? '9+' : unreadCount}
               </span>
             )}
           </button>
@@ -268,19 +296,14 @@ export default function Header({ sidebarOpen, setSidebarOpen }: HeaderProps) {
                           <p className="text-sm font-bold text-navy dark:text-white truncate">{notif.title}</p>
                           {notif.unread && <span className="w-2 h-2 rounded-full bg-[#E41E26] shrink-0" />}
                         </div>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
                           {notif.submitter} · {notif.province}
                           {notif.netPrice ? ` · $${notif.netPrice}` : ''}
                         </p>
-                        {notif.hasNote && (
-                          <div className="mt-2 p-2 rounded-lg bg-[#F4F7FE] dark:bg-[#0B1437] border border-gray-100 dark:border-gray-800 text-xs text-gray-600 dark:text-gray-300 italic">
-                            <span className="text-amber-500 font-bold mr-1 not-italic">📝</span>
-                            {notif.note}
-                          </div>
-                        )}
-                        <div className="flex items-center gap-2 mt-2">
+                        <div className="flex items-center gap-2 mt-1">
                           <p className="text-[10px] text-gray-400 font-medium">{timeAgo(notif.time)}</p>
                           {notif.hasPhoto && <span className="text-[10px] text-purple-500 font-bold">📷 Photo</span>}
+                          {notif.hasNote && <span className="text-[10px] text-amber-500 font-bold">📝 Note</span>}
                         </div>
                       </div>
                     </div>
