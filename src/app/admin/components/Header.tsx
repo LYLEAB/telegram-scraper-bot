@@ -268,14 +268,19 @@ export default function Header({ sidebarOpen, setSidebarOpen }: HeaderProps) {
                           <p className="text-sm font-bold text-navy dark:text-white truncate">{notif.title}</p>
                           {notif.unread && <span className="w-2 h-2 rounded-full bg-[#E41E26] shrink-0" />}
                         </div>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">
                           {notif.submitter} · {notif.province}
                           {notif.netPrice ? ` · $${notif.netPrice}` : ''}
                         </p>
-                        <div className="flex items-center gap-2 mt-1">
+                        {notif.hasNote && (
+                          <div className="mt-2 p-2 rounded-lg bg-[#F4F7FE] dark:bg-[#0B1437] border border-gray-100 dark:border-gray-800 text-xs text-gray-600 dark:text-gray-300 italic">
+                            <span className="text-amber-500 font-bold mr-1 not-italic">📝</span>
+                            {notif.note}
+                          </div>
+                        )}
+                        <div className="flex items-center gap-2 mt-2">
                           <p className="text-[10px] text-gray-400 font-medium">{timeAgo(notif.time)}</p>
                           {notif.hasPhoto && <span className="text-[10px] text-purple-500 font-bold">📷 Photo</span>}
-                          {notif.hasNote && <span className="text-[10px] text-amber-500 font-bold">📝 Note</span>}
                         </div>
                       </div>
                     </div>
