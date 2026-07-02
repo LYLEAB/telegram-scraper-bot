@@ -314,6 +314,7 @@ export default function SubmissionsClient({
             title: 'Submission Deleted',
             message: 'A submission was deleted',
             time: new Date().toISOString(),
+            type: 'delete',
             unread: true
           }
         }));
@@ -352,6 +353,7 @@ export default function SubmissionsClient({
             title: 'Submission Deleted',
             message: 'A submission was deleted',
             time: new Date().toISOString(),
+            type: 'delete',
             unread: true
           }
         }));

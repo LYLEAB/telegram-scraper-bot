@@ -103,6 +103,7 @@ export default function Header({ sidebarOpen, setSidebarOpen }: HeaderProps) {
           const time = new Date(n.time).getTime();
           return {
             ...n,
+            type: n.type || 'submit',
             unread: time > lastViewed
           };
         });
@@ -134,6 +135,7 @@ export default function Header({ sidebarOpen, setSidebarOpen }: HeaderProps) {
         const newNotif = {
           id: detail.id || `local-${Date.now()}`,
           title: detail.title,
+          type: detail.type || 'submit',
           submitter: detail.submission?.submitted_by || 'System',
           province: detail.submission?.province_label || '',
           time: new Date().toISOString(),
@@ -269,11 +271,15 @@ export default function Header({ sidebarOpen, setSidebarOpen }: HeaderProps) {
             className="relative flex items-center justify-center text-[#A3AED0] hover:text-navy dark:hover:text-white transition p-1"
           >
             <Bell className="w-5 h-5" />
-            {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 flex h-[16px] w-[16px] items-center justify-center rounded-full bg-[#E41E26] text-[9px] text-white font-bold border-2 border-white dark:border-[#111C44]">
-                {unreadCount > 9 ? '9+' : unreadCount}
-              </span>
-            )}
+            {unreadCount > 0 && (() => {
+              const latestUnread = notifications.find(n => n.unread);
+              const isDelete = latestUnread?.type === 'delete' || latestUnread?.id?.startsWith('del-');
+              return (
+                <span className={`absolute -top-1 -right-1 flex h-[16px] w-[16px] items-center justify-center rounded-full text-[9px] text-white font-bold border-2 border-white dark:border-[#111C44] ${isDelete ? 'bg-[#E41E26]' : 'bg-green-500'}`}>
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              );
+            })()}
           </button>
           
           {showNotifications && (
@@ -282,9 +288,15 @@ export default function Header({ sidebarOpen, setSidebarOpen }: HeaderProps) {
               <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-800">
                 <div className="flex items-center gap-2">
                   <h3 className="font-bold text-navy dark:text-white">{translate('notifications')}</h3>
-                  {unreadCount > 0 && (
-                    <span className="bg-[#E41E26] text-white text-[10px] font-bold px-2 py-0.5 rounded-full">{unreadCount} {translate('new')}</span>
-                  )}
+                  {unreadCount > 0 && (() => {
+                    const latestUnread = notifications.find(n => n.unread);
+                    const isDelete = latestUnread?.type === 'delete' || latestUnread?.id?.startsWith('del-');
+                    return (
+                      <span className={`${isDelete ? 'bg-[#E41E26]' : 'bg-green-500'} text-white text-[10px] font-bold px-2 py-0.5 rounded-full`}>
+                        {unreadCount} {translate('new')}
+                      </span>
+                    );
+                  })()}
                 </div>
                 <div className="flex items-center gap-3">
                   <button onClick={fetchNotifications} className="text-xs text-gray-400 hover:text-navy dark:hover:text-white transition" title="Refresh">

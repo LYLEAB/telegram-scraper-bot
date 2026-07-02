@@ -437,7 +437,8 @@ export default function AdminDashboard({
           id: `del-${id}`,
           title: 'Submission Deleted',
           message: deletedSub ? `Deleted submission by ${deletedSub.submitted_by}` : 'A submission was deleted',
-          time: 'Just now',
+          time: new Date().toISOString(),
+          type: 'delete',
           unread: true,
           submission: deletedSub
         }
