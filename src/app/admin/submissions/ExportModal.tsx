@@ -125,16 +125,29 @@ export default function ExportModal({ isOpen, onClose, data }: ExportModalProps)
 
   const handleExportExcel = () => {
     const { headers, rows } = getExportData();
-    const info = [`Exported ${data.length} records — ${new Date().toLocaleString()}`];
+    const filename = `MI_Price_Update_${new Date().toISOString().split('T')[0]}.xlsx`;
+
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/api/export-excel';
+    form.target = '_blank';
     
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.aoa_to_sheet([[...info], [], headers, ...rows]);
+    const dataInput = document.createElement('input');
+    dataInput.type = 'hidden';
+    dataInput.name = 'excelData';
+    dataInput.value = JSON.stringify([['Weekly Market Price Update'], headers, ...rows]);
     
-    if (!ws['!merges']) ws['!merges'] = [];
-    ws['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: headers.length - 1 } });
+    const nameInput = document.createElement('input');
+    nameInput.type = 'hidden';
+    nameInput.name = 'filename';
+    nameInput.value = filename;
     
-    XLSX.utils.book_append_sheet(wb, ws, 'Submissions');
-    XLSX.writeFile(wb, `MI_Price_Update_${new Date().toISOString().split('T')[0]}.xlsx`);
+    form.appendChild(dataInput);
+    form.appendChild(nameInput);
+    document.body.appendChild(form);
+    form.submit();
+    
+    setTimeout(() => document.body.removeChild(form), 100);
     onClose();
   };
 
