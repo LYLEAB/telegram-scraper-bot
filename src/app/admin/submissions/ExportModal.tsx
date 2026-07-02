@@ -158,9 +158,10 @@ export default function ExportModal({ isOpen, onClose, data }: ExportModalProps)
 
   const handleExportCSV = () => {
     const { headers, rows } = getExportData();
+    const plainRows = rows.map(r => r.map(c => typeof c === 'object' && c !== null && 'text' in c ? c.text : c));
     const info = [`Exported ${data.length} records — ${new Date().toLocaleString()}`];
     const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.aoa_to_sheet([['Weekly Market Price Update'], [...info], [], headers, ...rows]);
+    const ws = XLSX.utils.aoa_to_sheet([['Weekly Market Price Update'], [...info], [], headers, ...plainRows]);
     XLSX.utils.book_append_sheet(wb, ws, 'Submissions');
     XLSX.writeFile(wb, `MI_Price_Update_${new Date().toISOString().split('T')[0]}.csv`);
     onClose();
@@ -168,7 +169,8 @@ export default function ExportModal({ isOpen, onClose, data }: ExportModalProps)
 
   const handleExportPDF = () => {
     const { headers, rows } = getExportData();
-    
+    const plainRows = rows.map(r => r.map(c => typeof c === 'object' && c !== null && 'text' in c ? c.text : c));
+
     // Landscape orientation to fit many columns, use A3 to avoid text wrapping issues
     const doc = new jsPDF({ orientation: 'landscape', format: 'a3' });
     
@@ -183,7 +185,7 @@ export default function ExportModal({ isOpen, onClose, data }: ExportModalProps)
     autoTable(doc, {
       startY: 32,
       head: [headers],
-      body: rows,
+      body: plainRows,
       theme: 'grid',
       headStyles: { fillColor: [15, 23, 42], textColor: 255, fontSize: 9, fontStyle: 'bold', halign: 'center', valign: 'middle' },
       bodyStyles: { fontSize: 8, cellPadding: 4, textColor: [51, 65, 85], halign: 'center', valign: 'middle' },
@@ -277,7 +279,9 @@ export default function ExportModal({ isOpen, onClose, data }: ExportModalProps)
                           rows.map((row, i) => (
                             <tr key={i} className="hover:bg-white dark:hover:bg-[#111C44]/50">
                               {row.map((cell, j) => (
-                                <td key={j} className="px-3 py-2 text-gray-600 dark:text-gray-400">{cell || '-'}</td>
+                                <td key={j} className="px-3 py-2 text-gray-600 dark:text-gray-400">
+                                  {typeof cell === 'object' && cell !== null && 'text' in cell ? cell.text : cell || '-'}
+                                </td>
                               ))}
                             </tr>
                           ))
