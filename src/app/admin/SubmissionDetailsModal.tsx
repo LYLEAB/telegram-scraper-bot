@@ -16,6 +16,25 @@ export default function SubmissionDetailsModal({ isOpen, onClose, submission }: 
 
   if (!isOpen || !submission) return null;
 
+  const parseScheme = (schemeString: string) => {
+    if (!schemeString) return { scheme: '—', foc: '—' };
+    const plusMatch = schemeString.match(/^(\d+)\s*\+\s*(\d+)$/);
+    if (plusMatch) return { scheme: plusMatch[1], foc: plusMatch[2] };
+    return { scheme: schemeString, foc: '—' };
+  };
+
+  let computedNetPrice = submission.net_price;
+  if (!computedNetPrice && submission.basic_price && submission.scheme) {
+    const { scheme, foc } = parseScheme(submission.scheme);
+    if (scheme !== '—' && foc !== '—') {
+      const s = Number(scheme);
+      const f = Number(foc);
+      if (s > 0) {
+        computedNetPrice = ((Number(submission.basic_price) * s) / (s + f)).toFixed(2);
+      }
+    }
+  }
+
   return (
     <div 
       className="fixed inset-0 z-[110] flex items-center justify-center bg-navy/60 backdrop-blur-sm p-4"
@@ -158,7 +177,7 @@ export default function SubmissionDetailsModal({ isOpen, onClose, submission }: 
               </div>
               <div className="bg-blue-50 dark:bg-blue-500/10 rounded-lg p-3 border border-blue-100 dark:border-blue-500/20">
                 <span className="block text-xs text-blue-600 dark:text-blue-400 mb-1">Net Price</span>
-                <span className="font-bold text-blue-700 dark:text-blue-300">${submission.net_price || '-'}</span>
+                <span className="font-bold text-blue-700 dark:text-blue-300">${computedNetPrice || '-'}</span>
               </div>
               <div className="bg-orange-50 dark:bg-orange-500/10 rounded-lg p-3 border border-orange-100 dark:border-orange-500/20">
                 <span className="block text-xs text-orange-600 dark:text-orange-400 mb-1">To Seller</span>
