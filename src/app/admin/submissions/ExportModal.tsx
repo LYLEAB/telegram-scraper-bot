@@ -140,7 +140,6 @@ export default function ExportModal({ isOpen, onClose, data }: ExportModalProps)
       const form = document.createElement('form');
       form.method = 'POST';
       form.action = '/api/export-excel';
-      form.target = '_blank';
       
       const dataInput = document.createElement('input');
       dataInput.type = 'hidden';
