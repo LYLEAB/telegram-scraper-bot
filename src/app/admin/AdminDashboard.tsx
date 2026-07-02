@@ -458,7 +458,7 @@ export default function AdminDashboard({
       'Date', 'Chanel', 'Category', 'Brand', 'SKUs', 'NCP/ORD', 
       'Basic price', 'Price In', 'Scheme', 'FOC', 'Discount', 
       'Price after promotion', 'Enconsumer', 'W/S-Sell Per Carton', 
-      'Remark', 'Other'
+      'Remark', 'Location GPS', 'Commune', 'Village'
     ];
 
     const info = [`Exported ${filteredSubmissions.length} records — ${new Date().toLocaleString()}`];
@@ -482,7 +482,9 @@ export default function AdminDashboard({
         sub.sellout_price_consumer || '',
         sub.sellout_price_seller || '',
         sub.note || '',
-        `${sub.submitted_by || ''} - ${sub.province_label || ''}, ${sub.district_label || ''}`
+        (sub.lat && sub.lng) ? `${sub.lat}, ${sub.lng}` : '',
+        sub.commune || '',
+        sub.village || ''
       ];
     });
 

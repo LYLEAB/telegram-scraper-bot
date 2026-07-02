@@ -26,7 +26,9 @@ const AVAILABLE_COLUMNS = [
   { id: 'sellout_price_consumer_can', label: 'To Enconsumer Per Can' },
   { id: 'sellout_price_seller', label: 'Sellout to Seller (W/S-Sell)' },
   { id: 'note', label: 'Notes' },
-  { id: 'other', label: 'Other' },
+  { id: 'gps', label: 'Location GPS' },
+  { id: 'commune', label: 'Commune' },
+  { id: 'village', label: 'Village' },
   { id: 'submitted_by', label: 'Submitter' },
   { id: 'province_label', label: 'Province' },
   { id: 'district_label', label: 'District' }
@@ -110,7 +112,9 @@ export default function ExportModal({ isOpen, onClose, data }: ExportModalProps)
           case 'basic_price': rowData.push(sub.basic_price ? `$${sub.basic_price}` : ''); break;
           case 'net_price': rowData.push(computedNetPrice ? `$${computedNetPrice}` : ''); break;
           case 'discount': rowData.push(''); break; // Currently not captured in DB
-          case 'other': rowData.push(''); break; // Blank column
+          case 'gps': rowData.push((sub.lat && sub.lng) ? `${sub.lat}, ${sub.lng}` : ''); break;
+          case 'commune': rowData.push(sub.commune || ''); break;
+          case 'village': rowData.push(sub.village || ''); break;
           case 'sellout_price_consumer': rowData.push(sub.sellout_price_consumer ? `$${sub.sellout_price_consumer}` : ''); break;
           case 'sellout_price_consumer_can': rowData.push(sub.sellout_price_consumer_can ? `${sub.sellout_price_consumer_can}` : ''); break;
           case 'sellout_price_seller': rowData.push(sub.sellout_price_seller ? `$${sub.sellout_price_seller}` : ''); break;
