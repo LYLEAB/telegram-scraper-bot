@@ -333,14 +333,14 @@ export default function Form({ options }: { options: any }) {
           <div className="p-4 space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="flex flex-col justify-end">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Region <span className="text-gray-400 text-xs font-normal whitespace-nowrap">(សូមជ្រើសរើសតំបន់)</span></label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Region <span className="text-gray-400 text-xs font-normal ">(សូមជ្រើសរើសតំបន់)</span></label>
                 <select name="region_code" value={formData.region_code} onChange={handleChange} className="w-full h-[42px] px-3 py-2 bg-white text-gray-900 font-medium border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                   <option value="" className="text-gray-500 font-normal">Select Region...</option>
                   {options.regions.map((r: any) => <option key={r.code} value={r.code}>{r.label}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Dealer <span className="text-gray-400 text-xs font-normal whitespace-nowrap">(សូមជ្រើសរើសដេប៉ូ)</span></label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Dealer <span className="text-gray-400 text-xs font-normal ">(សូមជ្រើសរើសដេប៉ូ)</span></label>
                 <SearchableSelect
                   name="dealer_code"
                   options={filteredDealers}
@@ -353,14 +353,14 @@ export default function Form({ options }: { options: any }) {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="flex flex-col justify-end">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Province <span className="text-gray-400 text-xs font-normal whitespace-nowrap">(សូមជ្រើសរើសខេត្ត)</span></label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Province <span className="text-gray-400 text-xs font-normal ">(សូមជ្រើសរើសខេត្ត)</span></label>
                 <select name="province_code" value={formData.province_code} onChange={handleChange} className="w-full h-[42px] px-3 py-2 bg-white text-gray-900 font-medium border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                   <option value="" className="text-gray-500 font-normal">Select Province...</option>
                   {options.provinces.map((p: any) => <option key={p.code} value={p.code}>{p.label}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">District <span className="text-gray-400 text-xs font-normal whitespace-nowrap">(សូមជ្រើសរើសស្រុក)</span></label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">District <span className="text-gray-400 text-xs font-normal ">(សូមជ្រើសរើសស្រុក)</span></label>
                 <SearchableSelect
                   name="district_code"
                   options={filteredDistricts}
@@ -374,11 +374,11 @@ export default function Form({ options }: { options: any }) {
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-gray-100 pt-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Commune <span className="text-gray-400 text-xs font-normal whitespace-nowrap">(សូមបំពេញឈ្មោះឃុំ)</span></label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Commune <span className="text-gray-400 text-xs font-normal ">(សូមបំពេញឈ្មោះឃុំ)</span></label>
                 <input type="text" name="commune" value={formData.commune} onChange={handleChange} placeholder="Enter Commune" className="w-full h-[42px] px-3 py-2 bg-white text-gray-900 font-medium border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Village <span className="text-gray-400 text-xs font-normal whitespace-nowrap">(សូមបំពេញឈ្មោះភូមិ)</span></label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Village <span className="text-gray-400 text-xs font-normal ">(សូមបំពេញឈ្មោះភូមិ)</span></label>
                 <input type="text" name="village" value={formData.village} onChange={handleChange} placeholder="Enter Village" className="w-full h-[42px] px-3 py-2 bg-white text-gray-900 font-medium border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
             </div>
@@ -406,7 +406,7 @@ export default function Form({ options }: { options: any }) {
           </div>
           <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Main Channel <span className="text-gray-400 text-xs font-normal whitespace-nowrap">(សូមជ្រើសរើស Channel)</span></label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Main Channel <span className="text-gray-400 text-xs font-normal ">(សូមជ្រើសរើស Channel)</span></label>
               <select name="channel_code" value={formData.channel_code} onChange={handleChange} className="w-full h-[42px] px-3 py-2 bg-white text-gray-900 font-medium border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                 <option value="" className="text-gray-500 font-normal">Select Channel...</option>
                 {options.channels.map((c: any) => <option key={c.code} value={c.code}>{c.label}</option>)}
@@ -441,11 +441,11 @@ export default function Form({ options }: { options: any }) {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="flex flex-col justify-end">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Basic Price <span className="text-gray-400 text-xs font-normal whitespace-nowrap">(តម្លៃដើម)</span></label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Basic Price <span className="text-gray-400 text-xs font-normal ">(តម្លៃដើម)</span></label>
                 <input type="number" step="any" name="basic_price" value={formData.basic_price} onChange={handleChange} className="w-full h-[42px] px-3 py-2 bg-white text-gray-900 font-medium border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
               <div className="flex flex-col justify-end">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Price Source <span className="text-gray-400 text-xs font-normal whitespace-nowrap">(តម្លៃដើមមកពី Wholesale/Company)</span></label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Price Source <span className="text-gray-400 text-xs font-normal ">(តម្លៃដើមមកពី Wholesale/Company)</span></label>
                 <select name="price_source_code" value={formData.price_source_code} onChange={handleChange} className="w-full h-[42px] px-3 py-2 bg-white text-gray-900 font-medium border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                   <option value="" className="text-gray-500 font-normal">Select Source...</option>
                   {options.priceSources.map((ps: any) => <option key={ps.code} value={ps.code}>{ps.label}</option>)}
@@ -455,19 +455,19 @@ export default function Form({ options }: { options: any }) {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-gray-100 pt-4">
               <div className="flex flex-col justify-end">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Net Price <span className="text-gray-400 text-xs font-normal whitespace-nowrap">(តម្លៃចែកដាច់)</span></label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Net Price <span className="text-gray-400 text-xs font-normal ">(តម្លៃចែកដាច់)</span></label>
                 <input type="number" step="any" name="net_price" value={formData.net_price} onChange={handleChange} className="w-full h-[42px] px-3 py-2 bg-white text-gray-900 font-medium border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
               <div className="flex flex-col justify-end">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Sellout To Seller <span className="text-gray-400 text-xs font-normal whitespace-nowrap">(លក់អោយទៅម៉ូយជាអ្នកលក់)</span></label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Sellout To Seller <span className="text-gray-400 text-xs font-normal ">(លក់អោយទៅម៉ូយជាអ្នកលក់)</span></label>
                 <input type="number" step="any" name="sellout_price_seller" value={formData.sellout_price_seller} onChange={handleChange} className="w-full h-[42px] px-3 py-2 bg-white text-gray-900 font-medium border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
               <div className="flex flex-col justify-end">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Sellout to Enconsumer Per Ctn <span className="text-gray-400 text-xs font-normal whitespace-nowrap">(លក់អោយទៅអ្នកផឹកក្នុងមួយកេស)</span></label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Sellout to Enconsumer Per Ctn <span className="text-gray-400 text-xs font-normal ">(លក់អោយទៅអ្នកផឹកក្នុងមួយកេស)</span></label>
                 <input type="number" step="any" name="sellout_price_consumer" value={formData.sellout_price_consumer} onChange={handleChange} className="w-full h-[42px] px-3 py-2 bg-white text-gray-900 font-medium border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
               <div className="flex flex-col justify-end">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Sellout to Enconsumer Per Can <span className="text-gray-400 text-xs font-normal whitespace-nowrap">(លក់អោយទៅអ្នកផឹកក្នុងមួយកំប៉ុង)</span></label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Sellout to Enconsumer Per Can <span className="text-gray-400 text-xs font-normal ">(លក់អោយទៅអ្នកផឹកក្នុងមួយកំប៉ុង)</span></label>
                 <input type="number" step="any" name="sellout_price_consumer_can" value={formData.sellout_price_consumer_can} onChange={handleChange} className="w-full h-[42px] px-3 py-2 bg-white text-gray-900 font-medium border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
             </div>

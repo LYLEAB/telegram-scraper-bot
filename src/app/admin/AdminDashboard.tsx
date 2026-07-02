@@ -589,7 +589,7 @@ export default function AdminDashboard({
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-5 md:gap-6 2xl:gap-7.5 mb-5 md:mb-6 2xl:mb-7.5">
         
         {/* Weekly Submissions Line Chart (Takes 2 columns) */}
-        <div className="rounded-[20px] bg-white dark:bg-[#111C44] p-6 shadow-horizon lg:col-span-2">
+        <div className="rounded-[20px] bg-white dark:bg-[#111C44] p-6 shadow-horizon lg:col-span-2 min-w-0">
           <div className="flex items-center justify-between mb-4">
             <div>
               <p className="text-sm font-medium text-horizon-secondary">{translate('thisWeek')}</p>
@@ -632,7 +632,7 @@ export default function AdminDashboard({
         </div>
 
         {/* Submissions by Channel Pie Chart (Takes 1 column) */}
-        <div className="rounded-[20px] bg-white dark:bg-[#111C44] p-6 shadow-horizon">
+        <div className="rounded-[20px] bg-white dark:bg-[#111C44] p-6 shadow-horizon min-w-0">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-bold text-navy dark:text-white">{translate('byChannel')}</h3>
             {channelFilter && (
@@ -685,7 +685,7 @@ export default function AdminDashboard({
         </div>
 
         {/* Submissions by Price Source Line Chart (Takes 1 column) */}
-        <div className="rounded-[20px] bg-white dark:bg-[#111C44] p-6 shadow-horizon">
+        <div className="rounded-[20px] bg-white dark:bg-[#111C44] p-6 shadow-horizon min-w-0">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-bold text-navy dark:text-white">{translate('ncpOrdTrend')}</h3>
           </div>
@@ -734,7 +734,7 @@ export default function AdminDashboard({
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 md:gap-6 2xl:gap-7.5">
         
         {/* Chart 1: Submissions by Province */}
-        <div className="rounded-[20px] bg-white dark:bg-[#111C44] p-6 shadow-horizon">
+        <div className="rounded-[20px] bg-white dark:bg-[#111C44] p-6 shadow-horizon min-w-0">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-bold text-navy dark:text-white">{translate('topProvincesByActivity')}</h3>
             {provinceFilter && (
@@ -772,7 +772,7 @@ export default function AdminDashboard({
         </div>
 
         {/* Chart 2: Average Net Price by Brand */}
-        <div className="rounded-[20px] bg-white dark:bg-[#111C44] p-6 shadow-horizon">
+        <div className="rounded-[20px] bg-white dark:bg-[#111C44] p-6 shadow-horizon min-w-0">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-bold text-navy dark:text-white">{translate('avgNetPriceByBrand')}</h3>
             {brandFilter && (
@@ -811,7 +811,7 @@ export default function AdminDashboard({
         </div>
 
         {/* Chart 3: Top Schemes */}
-        <div className="rounded-[20px] bg-white dark:bg-[#111C44] p-6 shadow-horizon">
+        <div className="rounded-[20px] bg-white dark:bg-[#111C44] p-6 shadow-horizon min-w-0">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-bold text-navy dark:text-white">{translate('topSchemes')}</h3>
             {schemeFilter && (
