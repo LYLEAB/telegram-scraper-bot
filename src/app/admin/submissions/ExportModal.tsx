@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { X, FileSpreadsheet, FileText } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import * as XLSX from 'xlsx-js-style';
+import * as XLSX from 'xlsx';
 
 interface ExportModalProps {
   isOpen: boolean;
@@ -123,99 +123,18 @@ export default function ExportModal({ isOpen, onClose, data }: ExportModalProps)
     return { headers, rows };
   };
 
-  const handleExportExcel = async () => {
+  const handleExportExcel = () => {
     const { headers, rows } = getExportData();
+    const info = [`Exported ${data.length} records — ${new Date().toLocaleString()}`];
     
-    const excelData = [
-      ['Weekly Market Price Update'],
-      headers,
-      ...rows
-    ];
-
     const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.aoa_to_sheet(excelData);
-
-    // Merge title
+    const ws = XLSX.utils.aoa_to_sheet([[...info], [], headers, ...rows]);
+    
     if (!ws['!merges']) ws['!merges'] = [];
     ws['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: headers.length - 1 } });
-
-    // Set column widths
-    ws['!cols'] = headers.map((h, i) => {
-      if (i === 0) return { wch: 6 };
-      if (h === 'Brand') return { wch: 25 };
-      if (h === 'Notes') return { wch: 30 };
-      return { wch: 15 };
-    });
-
-    // Add Styles
-    for (let R = 0; R < excelData.length; ++R) {
-      for (let C = 0; C < headers.length; ++C) {
-        const cell_address = {c: C, r: R};
-        const cell_ref = XLSX.utils.encode_cell(cell_address);
-        if (!ws[cell_ref]) ws[cell_ref] = { t: 's', v: '' }; // Fallback for empty cells
-
-        if (R === 0) {
-          // Title
-          ws[cell_ref].s = {
-            font: { name: 'Arial', sz: 14, bold: true, color: { rgb: "FFFFFF" } },
-            fill: { fgColor: { rgb: "002060" } },
-            alignment: { vertical: "center", horizontal: "center" }
-          };
-        } else if (R === 1) {
-          // Headers
-          ws[cell_ref].s = {
-            font: { name: 'Arial', sz: 10, bold: true, color: { rgb: "FFFFFF" } },
-            fill: { fgColor: { rgb: "002060" } },
-            alignment: { vertical: "center", horizontal: "center" },
-            border: {
-              top: { style: 'thin', color: { rgb: "FFFFFF" } },
-              bottom: { style: 'thin', color: { rgb: "FFFFFF" } },
-              left: { style: 'thin', color: { rgb: "FFFFFF" } },
-              right: { style: 'thin', color: { rgb: "FFFFFF" } }
-            }
-          };
-        } else {
-          // Data
-          const isEven = R % 2 === 0; // Notice: Data starts at R=2, which is even, so row 1 of data is yellow
-          ws[cell_ref].s = {
-            font: { name: 'Arial', sz: 10 },
-            fill: { fgColor: { rgb: isEven ? "FFF2CC" : "D9E1F2" } },
-            alignment: { vertical: "center", horizontal: "center" },
-            border: {
-              top: { style: 'thin', color: { rgb: "B4C6E7" } },
-              bottom: { style: 'thin', color: { rgb: "B4C6E7" } },
-              left: { style: 'thin', color: { rgb: "B4C6E7" } },
-              right: { style: 'thin', color: { rgb: "B4C6E7" } }
-            }
-          };
-        }
-      }
+    
     XLSX.utils.book_append_sheet(wb, ws, 'Submissions');
-    
-    try {
-      const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-      const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-      
-      if (window.showSaveFilePicker) {
-        const handle = await window.showSaveFilePicker({
-          suggestedName: `MI_Price_Update_${new Date().toISOString().split('T')[0]}.xlsx`,
-          types: [{
-            description: 'Excel Workbook',
-            accept: {'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx']},
-          }],
-        });
-        const writable = await handle.createWritable();
-        await writable.write(blob);
-        await writable.close();
-      } else {
-        XLSX.writeFile(wb, `MI_Price_Update_${new Date().toISOString().split('T')[0]}.xlsx`);
-      }
-    } catch (err: any) {
-      if (err.name !== 'AbortError') {
-        XLSX.writeFile(wb, `MI_Price_Update_${new Date().toISOString().split('T')[0]}.xlsx`);
-      }
-    }
-    
+    XLSX.writeFile(wb, `MI_Price_Update_${new Date().toISOString().split('T')[0]}.xlsx`);
     onClose();
   };
 
