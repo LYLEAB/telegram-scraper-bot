@@ -8,7 +8,6 @@ import {
   ListFilter, Maximize2, ExternalLink, Calendar, Search, MapPin, X, Trash2, Camera, Download, FileText, Image as ImageIcon
 } from 'lucide-react';
 import ExcelJS from 'exceljs';
-import { saveAs } from 'file-saver';
 import PhotoModal from './PhotoModal';
 import SubmissionDetailsModal from './SubmissionDetailsModal';
 import { 
@@ -538,7 +537,16 @@ export default function AdminDashboard({
 
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    saveAs(blob, `MI_Price_Update_Dashboard_${new Date().toISOString().split('T')[0]}.xlsx`);
+    
+    // Vanilla JS download to avoid browser permission issues
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `MI_Price_Update_Dashboard_${new Date().toISOString().split('T')[0]}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
   };
 
   const openPhotos = (urlsString: string) => {

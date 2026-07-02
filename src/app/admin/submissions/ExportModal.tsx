@@ -4,7 +4,6 @@ import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import ExcelJS from 'exceljs';
-import { saveAs } from 'file-saver';
 
 interface ExportModalProps {
   isOpen: boolean;
@@ -186,7 +185,17 @@ export default function ExportModal({ isOpen, onClose, data }: ExportModalProps)
 
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    saveAs(blob, `MI_Price_Update_${new Date().toISOString().split('T')[0]}.xlsx`);
+    
+    // Vanilla JS download to avoid browser permission issues
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `MI_Price_Update_${new Date().toISOString().split('T')[0]}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+    
     onClose();
   };
 
