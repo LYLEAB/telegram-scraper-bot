@@ -670,10 +670,15 @@ export default function SubmissionsClient({
                   };
                   
                   const parseScheme = (schemeString: string) => {
-                    if (!schemeString) return { scheme: '—', foc: '—' };
-                    const plusMatch = schemeString.match(/^(\d+)\s*\+\s*(\d+)$/);
-                    if (plusMatch) return { scheme: plusMatch[1], foc: plusMatch[2] };
-                    return { scheme: schemeString, foc: '—' };
+                    if (!schemeString) return { scheme: '—', foc: '—', sNum: 0, fNum: 0 };
+                    const match = schemeString.match(/^(\d+)\s*\+\s*(.+)$/);
+                    if (match) {
+                      const sNum = Number(match[1]);
+                      const fMatch = match[2].match(/^(\d+)/);
+                      const fNum = fMatch ? Number(fMatch[1]) : 0;
+                      return { scheme: match[1], foc: match[2], sNum, fNum };
+                    }
+                    return { scheme: schemeString, foc: '—', sNum: 0, fNum: 0 };
                   };
 
                   const parseBrandAndSku = (fullBrandLabel: string) => {
@@ -689,18 +694,12 @@ export default function SubmissionsClient({
                   };
 
                   const { shortBrand, sku } = parseBrandAndSku(sub.brand_label);
-                  const { scheme, foc } = parseScheme(sub.scheme);
+                  const { scheme, foc, sNum, fNum } = parseScheme(sub.scheme);
                   const source = formatPriceSource(sub.price_source_label);
 
                   let computedNetPrice = sub.net_price;
-                  if (!computedNetPrice && sub.basic_price && scheme !== '—' && foc !== '—') {
-                    const s = Number(scheme);
-                    const f = Number(foc);
-                    if (s > 0 && f > 0) {
-                      computedNetPrice = ((Number(sub.basic_price) * s) / (s + f)).toFixed(2);
-                    } else {
-                      computedNetPrice = sub.basic_price;
-                    }
+                  if (!computedNetPrice && sub.basic_price && sNum > 0 && fNum > 0) {
+                    computedNetPrice = ((Number(sub.basic_price) * sNum) / (sNum + fNum)).toFixed(2);
                   } else if (!computedNetPrice && sub.basic_price) {
                     computedNetPrice = sub.basic_price;
                   }

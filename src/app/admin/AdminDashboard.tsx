@@ -28,15 +28,28 @@ const AdminMap = dynamic(() => import('./AdminMap'), {
 // e.g. "50+1" -> Scheme: 50, FOC: 1
 // "Buy 10 free 2" -> Scheme: 10, FOC: 2
 const parseScheme = (schemeString: string) => {
-  if (!schemeString) return { scheme: '', foc: '' };
-  
-  // Very basic parsing for common "+"" notation
-  const plusMatch = schemeString.match(/^(\d+)\s*\+\s*(\d+)$/);
-  if (plusMatch) {
-    return { scheme: plusMatch[1], foc: plusMatch[2] };
+  if (!schemeString) return { scheme: '', foc: '', sNum: 0, fNum: 0 };
+  const match = schemeString.match(/^(\d+)\s*\+\s*(.+)$/);
+  if (match) {
+    const sNum = Number(match[1]);
+    const fMatch = match[2].match(/^(\d+)/);
+    const fNum = fMatch ? Number(fMatch[1]) : 0;
+    return { scheme: match[1], foc: match[2], sNum, fNum };
   }
+  return { scheme: schemeString, foc: '', sNum: 0, fNum: 0 };
+};
 
-  return { scheme: schemeString, foc: '' };
+const getComputedNetPrice = (sub: any) => {
+  let net = sub.net_price;
+  const parsedScheme = parseScheme(sub.scheme);
+  if (!net && sub.basic_price && parsedScheme.sNum > 0 && parsedScheme.fNum > 0) {
+    const s = parsedScheme.sNum;
+    const f = parsedScheme.fNum;
+    net = ((Number(sub.basic_price) * s) / (s + f)).toFixed(2);
+  } else if (!net && sub.basic_price) {
+    net = sub.basic_price;
+  }
+  return net;
 };
 
 const formatPriceSource = (label: string | undefined | null) => {
@@ -272,9 +285,10 @@ export default function AdminDashboard({
   const brandPriceData = useMemo(() => {
     const sums: Record<string, { total: number, count: number }> = {};
     filteredSubmissions.forEach(s => {
-      if (s.brand_label && s.net_price) {
+      const netPrice = getComputedNetPrice(s);
+      if (s.brand_label && netPrice) {
         if (!sums[s.brand_label]) sums[s.brand_label] = { total: 0, count: 0 };
-        sums[s.brand_label].total += Number(s.net_price);
+        sums[s.brand_label].total += Number(netPrice);
         sums[s.brand_label].count += 1;
       }
     });
@@ -477,7 +491,7 @@ export default function AdminDashboard({
         parsedScheme.scheme,
         parsedScheme.foc,
         '',
-        sub.net_price || '',
+        getComputedNetPrice(sub) || '',
         sub.sellout_price_consumer || '',
         sub.sellout_price_consumer_can || '',
         sub.sellout_price_seller || '',

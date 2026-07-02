@@ -55,10 +55,15 @@ export default function ExportModal({ isOpen, onClose, data }: ExportModalProps)
     const headers = ['No.', ...activeCols.map(c => c.label)];
 
     const parseScheme = (schemeString: string) => {
-      if (!schemeString) return { scheme: '', foc: '' };
-      const plusMatch = schemeString.match(/^(\d+)\s*\+\s*(\d+)$/);
-      if (plusMatch) return { scheme: plusMatch[1], foc: plusMatch[2] };
-      return { scheme: schemeString, foc: '' };
+      if (!schemeString) return { scheme: '', foc: '', sNum: 0, fNum: 0 };
+      const match = schemeString.match(/^(\d+)\s*\+\s*(.+)$/);
+      if (match) {
+        const sNum = Number(match[1]);
+        const fMatch = match[2].match(/^(\d+)/);
+        const fNum = fMatch ? Number(fMatch[1]) : 0;
+        return { scheme: match[1], foc: match[2], sNum, fNum };
+      }
+      return { scheme: schemeString, foc: '', sNum: 0, fNum: 0 };
     };
 
     const parseBrandAndSku = (fullBrandLabel: string) => {
@@ -86,14 +91,10 @@ export default function ExportModal({ isOpen, onClose, data }: ExportModalProps)
       const { shortBrand, sku } = parseBrandAndSku(sub.brand_label);
       
       let computedNetPrice = sub.net_price;
-      if (!computedNetPrice && sub.basic_price && parsedScheme.scheme && parsedScheme.foc && parsedScheme.scheme !== '—' && parsedScheme.foc !== '—') {
-        const s = Number(parsedScheme.scheme);
-        const f = Number(parsedScheme.foc);
-        if (s > 0 && f > 0) {
-          computedNetPrice = ((Number(sub.basic_price) * s) / (s + f)).toFixed(2);
-        } else {
-          computedNetPrice = sub.basic_price;
-        }
+      if (!computedNetPrice && sub.basic_price && parsedScheme.sNum > 0 && parsedScheme.fNum > 0) {
+        const s = parsedScheme.sNum;
+        const f = parsedScheme.fNum;
+        computedNetPrice = ((Number(sub.basic_price) * s) / (s + f)).toFixed(2);
       } else if (!computedNetPrice && sub.basic_price) {
         computedNetPrice = sub.basic_price;
       }
