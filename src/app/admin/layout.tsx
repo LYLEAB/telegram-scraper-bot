@@ -17,6 +17,14 @@ export default function AdminLayout({
       <div className=" ">
         {/* Page Wrapper Start */}
       <div className="flex h-screen overflow-hidden">
+        {/* Sidebar Overlay for Mobile */}
+        {sidebarOpen && (
+          <div 
+            className="fixed inset-0 z-40 bg-navy/60 backdrop-blur-sm lg:hidden transition-opacity"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+        
         {/* Sidebar Start */}
         <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
         {/* Sidebar End */}

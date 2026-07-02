@@ -80,6 +80,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
                   <li key={index}>
                     <Link
                       href={item.path}
+                      onClick={() => setSidebarOpen(false)}
                       className={`group relative flex items-center gap-2.5 rounded-lg px-4 py-3 font-bold duration-300 ease-in-out hover:bg-horizon-light dark:hover:bg-[#0B1437] ${
                         isActive ? 'text-navy dark:text-white' : 'text-horizon-secondary'
                       }`}
