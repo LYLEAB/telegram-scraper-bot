@@ -17,21 +17,22 @@ export default function SubmissionDetailsModal({ isOpen, onClose, submission }: 
   if (!isOpen || !submission) return null;
 
   const parseScheme = (schemeString: string) => {
-    if (!schemeString) return { scheme: '—', foc: '—' };
-    const plusMatch = schemeString.match(/^(\d+)\s*\+\s*(\d+)$/);
-    if (plusMatch) return { scheme: plusMatch[1], foc: plusMatch[2] };
-    return { scheme: schemeString, foc: '—' };
+    if (!schemeString) return { scheme: '—', foc: '—', sNum: 0, fNum: 0 };
+    const match = schemeString.match(/^(\d+)\s*\+\s*(.+)$/);
+    if (match) {
+      const sNum = Number(match[1]);
+      const fMatch = match[2].match(/^(\d+)/);
+      const fNum = fMatch ? Number(fMatch[1]) : 0;
+      return { scheme: match[1], foc: match[2], sNum, fNum };
+    }
+    return { scheme: schemeString, foc: '—', sNum: 0, fNum: 0 };
   };
 
   let computedNetPrice = submission.net_price;
   if (!computedNetPrice && submission.basic_price && submission.scheme) {
-    const { scheme, foc } = parseScheme(submission.scheme);
-    if (scheme !== '—' && foc !== '—') {
-      const s = Number(scheme);
-      const f = Number(foc);
-      if (s > 0) {
-        computedNetPrice = ((Number(submission.basic_price) * s) / (s + f)).toFixed(2);
-      }
+    const { sNum, fNum } = parseScheme(submission.scheme);
+    if (sNum > 0 && fNum > 0) {
+      computedNetPrice = ((Number(submission.basic_price) * sNum) / (sNum + fNum)).toFixed(2);
     }
   }
 
