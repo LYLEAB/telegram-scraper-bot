@@ -456,9 +456,9 @@ export default function AdminDashboard({
     
     const headers = [
       'Date', 'Chanel', 'Category', 'Brand', 'SKUs', 'NCP/ORD', 
-      'Basic price', 'Price In', 'Scheme', 'FOC', 'Discount', 
-      'Price after promotion', 'Enconsumer', 'W/S-Sell Per Carton', 
-      'Remark', 'Location GPS', 'Commune', 'Village'
+      'Price In', 'Scheme', 'FOC', 'Discount', 
+      'Price after promotion', 'To Enconsumer Per Ctn', 'To Enconsumer Per Can', 'Sellout to Seller (W/S-Sell)', 
+      'Notes', 'Province', 'District', 'Commune', 'Village', 'Location GPS', 'Submitter'
     ];
 
     const info = [`Exported ${filteredSubmissions.length} records — ${new Date().toLocaleString()}`];
@@ -474,17 +474,20 @@ export default function AdminDashboard({
         sub.type_label || '',
         sub.price_source_label || 'NCP',
         sub.basic_price || '',
-        sub.basic_price || '',
         parsedScheme.scheme,
         parsedScheme.foc,
         '',
         sub.net_price || '',
         sub.sellout_price_consumer || '',
+        sub.sellout_price_consumer_can || '',
         sub.sellout_price_seller || '',
         sub.note || '',
-        (sub.lat && sub.lng) ? `${sub.lat}, ${sub.lng}` : '',
+        sub.province_label || '',
+        sub.district_label || '',
         sub.commune || '',
-        sub.village || ''
+        sub.village || '',
+        (sub.lat && sub.lng) ? `${sub.lat}, ${sub.lng}` : '',
+        sub.submitted_by || ''
       ];
     });
 

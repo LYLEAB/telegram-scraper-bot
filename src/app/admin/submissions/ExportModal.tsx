@@ -26,12 +26,12 @@ const AVAILABLE_COLUMNS = [
   { id: 'sellout_price_consumer_can', label: 'To Enconsumer Per Can' },
   { id: 'sellout_price_seller', label: 'Sellout to Seller (W/S-Sell)' },
   { id: 'note', label: 'Notes' },
-  { id: 'gps', label: 'Location GPS' },
+  { id: 'province_label', label: 'Province' },
+  { id: 'district_label', label: 'District' },
   { id: 'commune', label: 'Commune' },
   { id: 'village', label: 'Village' },
-  { id: 'submitted_by', label: 'Submitter' },
-  { id: 'province_label', label: 'Province' },
-  { id: 'district_label', label: 'District' }
+  { id: 'gps', label: 'Location GPS' },
+  { id: 'submitted_by', label: 'Submitter' }
 ];
 
 export default function ExportModal({ isOpen, onClose, data }: ExportModalProps) {
