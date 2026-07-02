@@ -442,6 +442,7 @@ export default function AdminDashboard({
           submission: deletedSub
         }
       }));
+      window.dispatchEvent(new CustomEvent('submission-deleted', { detail: { id } }));
     } catch (err: any) {
       alert('Delete error: ' + err.message);
     } finally {

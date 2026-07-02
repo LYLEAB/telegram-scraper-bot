@@ -135,8 +135,17 @@ export default function Header({ sidebarOpen, setSidebarOpen }: HeaderProps) {
       });
     };
 
+    const handleSubmissionDeleted = (e: any) => {
+      const { id } = e.detail;
+      setNotifications(prev => prev.filter(n => n.id !== id));
+    };
+
     window.addEventListener('app-notification', handleAppNotification);
-    return () => window.removeEventListener('app-notification', handleAppNotification);
+    window.addEventListener('submission-deleted', handleSubmissionDeleted);
+    return () => {
+      window.removeEventListener('app-notification', handleAppNotification);
+      window.removeEventListener('submission-deleted', handleSubmissionDeleted);
+    };
   }, []);
 
   const handleNotificationClick = async (notif: any) => {

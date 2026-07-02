@@ -306,7 +306,10 @@ export default function SubmissionsClient({
     setBulkDeleteConfirm(false);
     for (const id of ids) {
       setIsDeleting(id);
-      try { await fetch(`/api/submissions/${id}`, { method: 'DELETE' }); } catch {}
+      try { 
+        await fetch(`/api/submissions/${id}`, { method: 'DELETE' }); 
+        window.dispatchEvent(new CustomEvent('submission-deleted', { detail: { id } }));
+      } catch {}
     }
     setSubmissions(prev => prev.filter(s => !ids.includes(s.id)));
     setSelectedIds(new Set());
@@ -332,7 +335,10 @@ export default function SubmissionsClient({
     setIsDeleting(id); setSubmissionToDelete(null);
     try {
       const res = await fetch(`/api/submissions/${id}`, { method: 'DELETE' });
-      if (res.ok) setSubmissions(prev => prev.filter(s => s.id !== id));
+      if (res.ok) {
+        setSubmissions(prev => prev.filter(s => s.id !== id));
+        window.dispatchEvent(new CustomEvent('submission-deleted', { detail: { id } }));
+      }
     } catch {}
     setIsDeleting(null);
   };
