@@ -193,21 +193,7 @@ export default function ExportModal({ isOpen, onClose, data }: ExportModalProps)
     }
 
     XLSX.utils.book_append_sheet(wb, ws, 'Submissions');
-    
-    // Robust vanilla JS download
-    const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-    const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `MI_Price_Update_${new Date().toISOString().split('T')[0]}.xlsx`;
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => {
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
-    }, 100);
-    
+    XLSX.writeFile(wb, `MI_Price_Update_${new Date().toISOString().split('T')[0]}.xlsx`);
     onClose();
   };
 
