@@ -154,34 +154,23 @@ export default function ExportModal({ isOpen, onClose, data }: ExportModalProps)
     const doc = new jsPDF({ orientation: 'landscape', format: 'a3' });
     
     // Title
-    doc.setFontSize(16);
-    doc.setTextColor(0, 32, 96);
+    doc.setFontSize(18);
+    doc.setTextColor(15, 23, 42); // Dark slate
     doc.setFont("helvetica", "bold");
-    doc.text('Weekly Market Price Update', 14, 22);
-    
-    // Subtitle
-    doc.setFontSize(10);
-    doc.setTextColor(100);
-    doc.setFont("helvetica", "normal");
-    doc.text(`Exported ${data.length} records on ${new Date().toLocaleString()}`, 14, 30);
+    const pageWidth = doc.internal.pageSize.getWidth();
+    doc.text('Weekly Market Price Update', pageWidth / 2, 22, { align: 'center' });
     
     // AutoTable
     autoTable(doc, {
-      startY: 36,
+      startY: 32,
       head: [headers],
       body: rows,
       theme: 'grid',
-      headStyles: { fillColor: [0, 32, 96], textColor: 255, fontSize: 9, fontStyle: 'bold', halign: 'center', valign: 'middle' },
-      bodyStyles: { fontSize: 8, cellPadding: 3, textColor: 0, halign: 'center', valign: 'middle' },
-      styles: { overflow: 'linebreak', lineWidth: 0.1, lineColor: [0, 32, 96] },
-      alternateRowStyles: { fillColor: [221, 235, 247] }, // Light blue
+      headStyles: { fillColor: [15, 23, 42], textColor: 255, fontSize: 9, fontStyle: 'bold', halign: 'center', valign: 'middle' },
+      bodyStyles: { fontSize: 8, cellPadding: 4, textColor: [51, 65, 85], halign: 'center', valign: 'middle' },
+      styles: { overflow: 'linebreak', lineWidth: 0.1, lineColor: [226, 232, 240] },
+      alternateRowStyles: { fillColor: [248, 250, 252] }, // Clean very light gray
       rowPageBreak: 'avoid',
-      didParseCell: function (data) {
-        // Apply peach color to even rows (0-indexed data.row.index)
-        if (data.section === 'body' && data.row.index % 2 === 0) {
-          data.cell.styles.fillColor = [252, 228, 214]; // Peach
-        }
-      },
       columnStyles: {
         0: { cellWidth: 15 } // No. column should be narrow
       }
