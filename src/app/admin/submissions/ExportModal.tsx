@@ -153,8 +153,9 @@ export default function ExportModal({ isOpen, onClose, data }: ExportModalProps)
 
   const handleExportCSV = () => {
     const { headers, rows } = getExportData();
+    const info = [`Exported ${data.length} records — ${new Date().toLocaleString()}`];
     const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    const ws = XLSX.utils.aoa_to_sheet([['Weekly Market Price Update'], [...info], [], headers, ...rows]);
     XLSX.utils.book_append_sheet(wb, ws, 'Submissions');
     XLSX.writeFile(wb, `MI_Price_Update_${new Date().toISOString().split('T')[0]}.csv`);
     onClose();
