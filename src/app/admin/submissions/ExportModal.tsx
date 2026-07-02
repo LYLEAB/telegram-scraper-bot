@@ -123,7 +123,7 @@ export default function ExportModal({ isOpen, onClose, data }: ExportModalProps)
     return { headers, rows };
   };
 
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     const { headers, rows } = getExportData();
     
     const excelData = [
@@ -190,10 +190,32 @@ export default function ExportModal({ isOpen, onClose, data }: ExportModalProps)
           };
         }
       }
-    }
-
     XLSX.utils.book_append_sheet(wb, ws, 'Submissions');
-    XLSX.writeFile(wb, `MI_Price_Update_${new Date().toISOString().split('T')[0]}.xlsx`);
+    
+    try {
+      const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+      const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      
+      if (window.showSaveFilePicker) {
+        const handle = await window.showSaveFilePicker({
+          suggestedName: `MI_Price_Update_${new Date().toISOString().split('T')[0]}.xlsx`,
+          types: [{
+            description: 'Excel Workbook',
+            accept: {'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx']},
+          }],
+        });
+        const writable = await handle.createWritable();
+        await writable.write(blob);
+        await writable.close();
+      } else {
+        XLSX.writeFile(wb, `MI_Price_Update_${new Date().toISOString().split('T')[0]}.xlsx`);
+      }
+    } catch (err: any) {
+      if (err.name !== 'AbortError') {
+        XLSX.writeFile(wb, `MI_Price_Update_${new Date().toISOString().split('T')[0]}.xlsx`);
+      }
+    }
+    
     onClose();
   };
 
