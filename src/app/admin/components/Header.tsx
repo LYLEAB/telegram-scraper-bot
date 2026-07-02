@@ -217,41 +217,41 @@ export default function Header({ sidebarOpen, setSidebarOpen }: HeaderProps) {
 
   return (
     <>
-      <header className="sticky top-4 z-30 flex w-full items-center justify-between px-4 py-3 md:px-6 2xl:px-11 transition-all duration-300 bg-white/80 dark:bg-[#0B1437]/80 backdrop-blur-xl rounded-2xl">
+      <header className="sticky top-4 z-30 flex flex-col md:flex-row w-full items-start md:items-center justify-between gap-4 px-4 py-3 md:px-6 2xl:px-11 transition-all duration-300 bg-white/80 dark:bg-[#0B1437]/80 backdrop-blur-xl rounded-2xl">
       
       {/* Left Side: Mobile Menu + Breadcrumbs & Title */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3 sm:gap-4 w-full md:w-auto">
         <button
           onClick={(e) => {
             e.stopPropagation();
             setSidebarOpen(!sidebarOpen);
           }}
-          className="z-50 block rounded-lg border border-gray-200 bg-white dark:bg-navy p-2 shadow-sm lg:hidden"
+          className="z-50 shrink-0 block rounded-lg border border-gray-200 bg-white dark:bg-navy p-2 shadow-sm lg:hidden"
         >
           <Menu className="w-5 h-5 text-gray-500 dark:text-gray-300" />
         </button>
         
-        <div className="flex flex-col justify-center">
-          <div className="text-[13px] font-medium text-[#A3AED0] mb-1">
+        <div className="flex flex-col justify-center min-w-0">
+          <div className="text-[11px] sm:text-[13px] font-medium text-[#A3AED0] mb-1 truncate">
             {translate('pages')} / {pageTitle}
           </div>
-          <h1 className="text-[32px] leading-tight font-extrabold text-navy dark:text-white">
+          <h1 className="text-2xl sm:text-[32px] leading-tight font-extrabold text-navy dark:text-white truncate">
             {pageTitle}
           </h1>
         </div>
       </div>
       
       {/* Right Side: The White Pill */}
-      <div className="flex items-center gap-4 bg-white/90 dark:bg-[#111C44]/90 backdrop-blur-md rounded-full p-2.5 shadow-horizon relative">
+      <div className="flex items-center justify-between md:justify-start w-full md:w-auto gap-2 sm:gap-4 bg-white/90 dark:bg-[#111C44]/90 backdrop-blur-md rounded-full p-2 sm:p-2.5 shadow-horizon relative">
         {/* Search */}
-        <div className="flex items-center rounded-full bg-[#F4F7FE] dark:bg-[#0B1437] px-4 py-2.5">
-          <Search className="w-4 h-4 text-horizon-secondary" />
+        <div className="flex items-center rounded-full bg-[#F4F7FE] dark:bg-[#0B1437] px-3 sm:px-4 py-2 sm:py-2.5 flex-1 md:flex-none">
+          <Search className="w-4 h-4 text-horizon-secondary shrink-0" />
           <input 
             type="text" 
             placeholder={translate('search')} 
             value={searchQuery}
             onChange={handleSearchChange}
-            className="bg-transparent border-none outline-none text-sm font-medium text-navy dark:text-white ml-2 w-24 sm:w-32 xl:w-48 placeholder:text-[#A3AED0]" 
+            className="bg-transparent border-none outline-none text-sm font-medium text-navy dark:text-white ml-2 w-full sm:w-32 xl:w-48 placeholder:text-[#A3AED0]" 
           />
         </div>
         
