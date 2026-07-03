@@ -140,6 +140,26 @@ export async function POST(request: Request) {
       return val >= 1000 ? `${val}៛` : `$${val}`;
     };
 
+    const parseScheme = (schemeString: string | null) => {
+      if (!schemeString) return { sNum: 0, fNum: 0 };
+      const match = schemeString.match(/^(\d+)\s*\+\s*(.+)$/);
+      if (match) {
+        const sNum = Number(match[1]);
+        const fMatch = match[2].match(/^(\d+)/);
+        const fNum = fMatch ? Number(fMatch[1]) : 0;
+        return { sNum, fNum };
+      }
+      return { sNum: 0, fNum: 0 };
+    };
+
+    const { sNum, fNum } = parseScheme(data.scheme);
+    let computedNetPrice = data.net_price;
+    if (!computedNetPrice && data.basic_price && sNum > 0 && fNum > 0) {
+      computedNetPrice = Number(((Number(data.basic_price) * sNum) / (sNum + fNum)).toFixed(2));
+    } else if (!computedNetPrice && data.basic_price) {
+      computedNetPrice = data.basic_price;
+    }
+
     const lines = [
       `<b>Submitted by:</b> ${data.submitted_by}`,
       '',
@@ -151,7 +171,7 @@ export async function POST(request: Request) {
       `<b>Channel:</b> ${channelLabel}${data.sub_channel_code ? ` (${subChannelLabel})` : ''}`,
       `<b>Scheme:</b> ${data.scheme ?? '-'}`,
       `• <b>Basic Price:</b> ${formatCurrencyDisplay(data.basic_price)} (From ${priceSourceLabel})`,
-      `• <b>Net Price:</b> ${formatCurrencyDisplay(data.net_price)}`,
+      `• <b>Net Price:</b> ${formatCurrencyDisplay(computedNetPrice)}`,
       `• <b>Sell Out Price to seller (អ្នកលក់):</b> ${formatCurrencyDisplay(data.sellout_price_seller)}`,
       `• <b>Sell Out Price to consumer Per Ctn (អ្នកផឹកក្នុងមួយកេស):</b> ${formatCurrencyDisplay(data.sellout_price_consumer)}`,
       `• <b>Sell Out Price to consumer Per Can (អ្នកផឹកក្នុងមួយកំប៉ុង):</b> ${formatCurrencyDisplay(data.sellout_price_consumer_can)}`,
