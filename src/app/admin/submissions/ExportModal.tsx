@@ -171,8 +171,10 @@ export default function ExportModal({ isOpen, onClose, data }: ExportModalProps)
     const { headers, rows } = getExportData();
     const plainRows = rows.map(r => r.map(c => typeof c === 'object' && c !== null && 'text' in c ? c.text : c));
 
-    // Landscape orientation to fit many columns, use A3 to avoid text wrapping issues
-    const doc = new jsPDF({ orientation: 'landscape', format: 'a3' });
+    // Calculate dynamic width based on number of columns to prevent squishing
+    const minWidth = 420; // A3 width as minimum
+    const calculatedWidth = Math.max(minWidth, headers.length * 40);
+    const doc = new jsPDF({ orientation: 'landscape', format: [297, calculatedWidth] });
     
     // Title
     doc.setFontSize(18);
