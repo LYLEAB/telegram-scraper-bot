@@ -309,14 +309,14 @@ export default function ExportModal({ isOpen, onClose, data }: ExportModalProps)
             <button
               onClick={handleExportCSV}
               disabled={selectedColumns.size === 0}
-              className="hidden sm:inline-flex items-center justify-center gap-2 rounded-xl bg-green-600 dark:bg-green-700 py-3 px-5 text-sm font-bold text-white hover:bg-green-700 dark:hover:bg-green-600 transition shadow-md shadow-green-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-green-600 dark:bg-green-700 py-3 px-5 text-sm font-bold text-white hover:bg-green-700 dark:hover:bg-green-600 transition shadow-md shadow-green-500/20 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
             >
               <FileText className="w-4 h-4" /> Export CSV
             </button>
             <button
               onClick={handleExportPDF}
               disabled={selectedColumns.size === 0}
-              className="hidden sm:inline-flex items-center justify-center gap-2 rounded-xl bg-gray-800 dark:bg-gray-700 py-3 px-5 text-sm font-bold text-white hover:bg-black transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-gray-800 dark:bg-gray-700 py-3 px-5 text-sm font-bold text-white hover:bg-black transition disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
             >
               <FileText className="w-4 h-4" /> Export PDF
             </button>

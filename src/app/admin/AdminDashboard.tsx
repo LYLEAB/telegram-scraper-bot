@@ -12,6 +12,7 @@ import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import PhotoModal from './PhotoModal';
 import SubmissionDetailsModal from './SubmissionDetailsModal';
+import ExportModal from './submissions/ExportModal';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line, PieChart, Pie, Cell, Legend
@@ -79,6 +80,7 @@ export default function AdminDashboard({
   const { translate } = useLanguage();
   const [submissions, setSubmissions] = useState(initialSubmissions);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   
   // Filters
   const [search, setSearch] = useState('');
@@ -466,68 +468,7 @@ export default function AdminDashboard({
   };
 
   const handleExportExcel = () => {
-    if (filteredSubmissions.length === 0) return;
-    
-    const headers = [
-      'Date', 'Chanel', 'Category', 'Brand', 'SKUs', 'NCP/ORD', 
-      'Price In', 'Scheme', 'FOC', 'Discount', 
-      'Price after promotion', 'To Enconsumer Per Ctn', 'To Enconsumer Per Can', 'Sellout to Seller (W/S-Sell)', 
-      'Notes', 'Province', 'District', 'Commune', 'Village', 'Location GPS', 'Submitter'
-    ];
-
-    const info = [`Exported ${filteredSubmissions.length} records — ${new Date().toLocaleString()}`];
-
-    const excelData = filteredSubmissions.map(sub => {
-      const date = sub.phnom_penh_time ? new Date(sub.phnom_penh_time) : new Date(sub.created_at);
-      const parsedScheme = parseScheme(sub.scheme);
-      return [
-        date.toLocaleDateString(),
-        sub.channel_label || '',
-        sub.category_label || '',
-        sub.brand_label || '',
-        sub.type_label || '',
-        sub.price_source_label || 'NCP',
-        sub.basic_price || '',
-        parsedScheme.scheme,
-        parsedScheme.foc,
-        '',
-        getComputedNetPrice(sub) || '',
-        sub.sellout_price_consumer || '',
-        sub.sellout_price_consumer_can || '',
-        sub.sellout_price_seller || '',
-        sub.note || '',
-        sub.province_label || '',
-        sub.district_label || '',
-        sub.commune || '',
-        sub.village || '',
-        (sub.lat && sub.lng) ? { text: `${sub.lat}, ${sub.lng}`, hyperlink: `https://www.google.com/maps?q=${sub.lat},${sub.lng}` } : '',
-        sub.submitted_by || ''
-      ];
-    });
-
-    const filename = `MI_Price_Update_Dashboard_${new Date().toISOString().split('T')[0]}.xlsx`;
-
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = '/api/export-excel';
-    form.target = '_blank';
-    
-    const dataInput = document.createElement('input');
-    dataInput.type = 'hidden';
-    dataInput.name = 'excelData';
-    dataInput.value = JSON.stringify([['Weekly Market Price Update'], headers, ...excelData]);
-    
-    const nameInput = document.createElement('input');
-    nameInput.type = 'hidden';
-    nameInput.name = 'filename';
-    nameInput.value = filename;
-    
-    form.appendChild(dataInput);
-    form.appendChild(nameInput);
-    document.body.appendChild(form);
-    form.submit();
-    
-    setTimeout(() => document.body.removeChild(form), 100);
+    setIsExportModalOpen(true);
   };
 
   const openPhotos = (urlsString: string) => {
@@ -544,7 +485,7 @@ export default function AdminDashboard({
           onClick={handleExportExcel}
           className="inline-flex items-center gap-2 rounded-full bg-[#E41E26] py-2.5 px-5 text-sm font-bold text-white hover:bg-[#C21820] transition shadow-sm shadow-red-500/20"
         >
-          <Download className="w-4 h-4" /> {translate ? translate('exportExcel') : 'Export Excel'}
+          <Download className="w-4 h-4" /> {translate ? translate('export') : 'Export'}
         </button>
       </div>
 
@@ -938,6 +879,12 @@ export default function AdminDashboard({
         isOpen={isPhotoModalOpen} 
         onClose={() => setIsPhotoModalOpen(false)} 
         photos={selectedPhotos} 
+      />
+
+      <ExportModal 
+        isOpen={isExportModalOpen} 
+        onClose={() => setIsExportModalOpen(false)} 
+        data={filteredSubmissions} 
       />
 
       <SubmissionDetailsModal
