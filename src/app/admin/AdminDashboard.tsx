@@ -12,7 +12,6 @@ import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import PhotoModal from './PhotoModal';
 import SubmissionDetailsModal from './SubmissionDetailsModal';
-import ExportModal from './submissions/ExportModal';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line, PieChart, Pie, Cell, Legend
@@ -80,7 +79,6 @@ export default function AdminDashboard({
   const { translate } = useLanguage();
   const [submissions, setSubmissions] = useState(initialSubmissions);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
-  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   
   // Filters
   const [search, setSearch] = useState('');
@@ -467,10 +465,6 @@ export default function AdminDashboard({
     }
   };
 
-  const handleExportExcel = () => {
-    setIsExportModalOpen(true);
-  };
-
   const openPhotos = (urlsString: string) => {
     if (!urlsString) return;
     setSelectedPhotos(urlsString.split(','));
@@ -479,15 +473,6 @@ export default function AdminDashboard({
 
   return (
     <div className="space-y-6">
-      {/* Top Actions */}
-      <div className="flex justify-end">
-        <button
-          onClick={handleExportExcel}
-          className="inline-flex items-center gap-2 rounded-full bg-[#E41E26] py-2.5 px-5 text-sm font-bold text-white hover:bg-[#C21820] transition shadow-sm shadow-red-500/20"
-        >
-          <Download className="w-4 h-4" /> {translate ? translate('export') : 'Export'}
-        </button>
-      </div>
 
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 md:gap-6 2xl:gap-7.5">
         
@@ -879,12 +864,6 @@ export default function AdminDashboard({
         isOpen={isPhotoModalOpen} 
         onClose={() => setIsPhotoModalOpen(false)} 
         photos={selectedPhotos} 
-      />
-
-      <ExportModal 
-        isOpen={isExportModalOpen} 
-        onClose={() => setIsExportModalOpen(false)} 
-        data={filteredSubmissions} 
       />
 
       <SubmissionDetailsModal
