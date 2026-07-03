@@ -94,7 +94,7 @@ export default function SubmissionsClient({
   // --- View ---
   const [viewMode, setViewMode] = useState<'table' | 'map'>('table');
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 15;
+  const [itemsPerPage, setItemsPerPage] = useState(5);
 
   // --- Bulk select ---
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -826,18 +826,42 @@ export default function SubmissionsClient({
           </div>
 
           {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between border-t border-gray-100 dark:border-gray-800 px-5 py-3">
-              <p className="text-sm text-gray-400">
-                <span className="font-bold text-navy dark:text-white">{(currentPage - 1) * itemsPerPage + 1}</span>–<span className="font-bold text-navy dark:text-white">{Math.min(currentPage * itemsPerPage, filteredSubmissions.length)}</span> of <span className="font-bold text-navy dark:text-white">{filteredSubmissions.length}</span>
-              </p>
-              <div className="flex items-center gap-1">
-                <button onClick={() => setCurrentPage(1)} disabled={currentPage === 1} className="px-2.5 py-1.5 text-xs rounded-lg border border-gray-200 dark:border-gray-700 text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition font-bold">«</button>
-                <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-700 text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition font-medium">← Prev</button>
-                <span className="px-3 py-1.5 text-sm font-bold text-navy dark:text-white">{currentPage} / {totalPages}</span>
-                <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-700 text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition font-medium">Next →</button>
-                <button onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages} className="px-2.5 py-1.5 text-xs rounded-lg border border-gray-200 dark:border-gray-700 text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition font-bold">»</button>
+          {filteredSubmissions.length > 0 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between border-t border-gray-100 dark:border-gray-800 px-5 py-3 gap-3">
+              <div className="flex flex-wrap items-center justify-center gap-3">
+                <p className="text-sm text-gray-400">
+                  <span className="font-bold text-navy dark:text-white">{(currentPage - 1) * itemsPerPage + 1}</span>–<span className="font-bold text-navy dark:text-white">{Math.min(currentPage * itemsPerPage, filteredSubmissions.length)}</span> of <span className="font-bold text-navy dark:text-white">{filteredSubmissions.length}</span>
+                </p>
+                <div className="h-4 w-px bg-gray-200 dark:bg-gray-700 hidden sm:block"></div>
+                <div className="flex items-center gap-2 bg-gray-50 dark:bg-[#0B1437] rounded-lg px-2 py-1 border border-gray-200 dark:border-gray-700">
+                  <select 
+                    value={itemsPerPage}
+                    onChange={(e) => {
+                      setItemsPerPage(Number(e.target.value));
+                      setCurrentPage(1); // Reset to first page
+                    }}
+                    className="text-xs font-bold bg-transparent text-navy dark:text-white focus:outline-none cursor-pointer"
+                  >
+                    <option value={5}>5 per page</option>
+                    <option value={10}>10 per page</option>
+                    <option value={15}>15 per page</option>
+                    <option value={20}>20 per page</option>
+                    <option value={50}>50 per page</option>
+                    <option value={100}>100 per page</option>
+                    <option value={200}>200 per page</option>
+                  </select>
+                </div>
               </div>
+              
+              {totalPages > 1 && (
+                <div className="flex items-center gap-1">
+                  <button onClick={() => setCurrentPage(1)} disabled={currentPage === 1} className="px-2.5 py-1.5 text-xs rounded-lg border border-gray-200 dark:border-gray-700 text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition font-bold">«</button>
+                  <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-700 text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition font-medium">← Prev</button>
+                  <span className="px-3 py-1.5 text-sm font-bold text-navy dark:text-white">{currentPage} / {totalPages}</span>
+                  <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-700 text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition font-medium">Next →</button>
+                  <button onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages} className="px-2.5 py-1.5 text-xs rounded-lg border border-gray-200 dark:border-gray-700 text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition font-bold">»</button>
+                </div>
+              )}
             </div>
           )}
         </div>
